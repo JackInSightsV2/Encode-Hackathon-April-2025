@@ -10,6 +10,15 @@ export default function WalletConnectButton() {
   const { setVisible } = useWalletModal();
   const [copied, setCopied] = useState(false);
 
+  // Automatically connect when wallet is selected
+  useEffect(() => {
+    if (wallet && !connected) {
+      connect().catch(error => {
+        console.error('Connection error:', error);
+      });
+    }
+  }, [wallet, connected, connect]);
+
   const handleConnect = () => {
     if (!wallet) {
       setVisible(true); // Open the wallet modal for selection
