@@ -1,7 +1,3 @@
-Perfect — with a **team of 4**, you can split into **parallel workstreams** that play to strengths and minimize blockers. Here's a **recommended division**:
-
----
-
 ## 🧑‍💻 **Team Structure – Roles & Responsibility**
 
 ---
@@ -86,4 +82,4 @@ Perfect — with a **team of 4**, you can split into **parallel workstreams** th
 
 ---
 
-Let me know if you want a **custom GitHub folder layout scaffold** to drop your team into quickly!
+Use rules.mcp to guide AI conversaions, you have TASKS.md to see what needs to be done. 

@@ -1,0 +1,55 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 🧠 AI Agent Task Log
+
+Guidelines for creating and managing task lists in markdown to track what the agent is working on.
+
+---
+
+## Task File Creation
+
+- Create a markdown file in the project root:
+  - Use `TASKS.md` or a specific name like `FEATURE_CHAT.md`
+  - One file per feature or focus area
+
+---
+
+## Structure
+
+```markdown
+# Feature Name
+
+Brief description of what this feature is and why it's being built.
+
+## ✅ Completed Tasks
+
+- [x] Describe something the agent has fully implemented
+- [x] Another finished item
+
+## 🔄 In Progress Tasks
+
+- [ ] Something the agent is actively working on
+- [ ] A task that's started but not done
+
+## 🕓 Future Tasks
+
+- [ ] A task the agent plans to do later
+- [ ] Optional ideas or stretch goals
+
+## 🧩 Implementation Plan
+
+Short bullet points or steps the agent expects to follow to complete this feature.
+```
+
+---
+
+## Notes
+
+- Keep tasks short, clear, and actionable
+- Move tasks between sections as status changes
+- This file should reflect the agent’s actual work and plans in real time
+
+---
