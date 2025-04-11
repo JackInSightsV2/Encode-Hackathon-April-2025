@@ -31,6 +31,7 @@ Build a React or Next.js frontend that:
   - Call Anchor `register_agent()` instruction
   - Show tx status + toast notification
 - [x] Display confirmation on success (maybe with agent preview)
+- [x] Added live preview toggle to see agent card before registration
 
 ---
 
@@ -57,26 +58,32 @@ Build a React or Next.js frontend that:
 ---
 
 ### 🧠 5. My Registered Agents View
-- [ ] Add a tab or page: "My Agents"
-- [ ] Filter by `agent.owner == wallet.publicKey`
-- [ ] Show call count (`total_calls`)
-- [ ] Add edit/delete actions (optional)
+- [x] Add a tab or page: "My Agents"
+- [x] Filter by `agent.owner == wallet.publicKey`
+- [x] Show call count (`total_calls`)
+- [x] Add edit/delete actions (optional)
 
 ---
 
 ### 🎁 6. UI/UX & Styling
-- [ ] Clean dashboard layout (Tailwind or Chakra UI)
-- [ ] Responsive design
-- [ ] Status indicators for txs (loading/success/error)
-- [ ] SOL price formatting helper
-- [ ] Tooltips for "What is this?" (e.g., endpoint)
+- [x] Clean dashboard layout with Solana-themed design (dark mode with purple accents)
+- [x] Responsive design (mobile-optimized)
+- [x] Status indicators for transactions (loading/success/error)
+- [x] SOL price formatting helper
+- [x] Tooltips for "What is this?" (e.g., endpoint)
+- [x] Consistent navigation with Navbar
+- [x] Glowing effects and gradients matching Solana style
+- [x] Proper typography and spacing
+- [x] Improved card components with hover effects
+- [x] Enhanced registration form with live preview
 
 ---
 
 ### ⚒️ Optional / Stretch Tasks
 - [x] Animate endpoint reveal with confetti 🎉
+- [x] Custom background effects (glowing orbs, grid patterns)
 - [ ] Support real-time agent logs (via WebSocket + Solana logs)
-- [ ] Theme switcher (dark/light mode)
+- [x] Page layout components for consistent UI
 - [ ] ENS-style domain names for agents
 - [ ] Rating system or ❤️ button
 
@@ -86,14 +93,19 @@ Build a React or Next.js frontend that:
 ```
 /src
   /components
-    AgentCard.tsx
+    /ui
+      AgentCard.tsx
+      StatusIndicator.tsx
+      Tooltip.tsx
     AgentForm.tsx
     WalletConnectButton.tsx
-  /pages
-    index.tsx          ← all agents
+    Navbar.tsx
+    PageLayout.tsx
+  /app
+    page.tsx          ← all agents
     /my-agents
     /register
-  /lib
-    anchorClient.ts    ← setup Anchor provider & IDL
-    solanaUtils.ts     ← get all agents, price helpers, etc.
+  /utils
+    solanaFormatters.ts     ← SOL price helpers
+    solanaStyling.ts     ← Styling constants
 ```

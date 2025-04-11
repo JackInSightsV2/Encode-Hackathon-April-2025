@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useConnection } from '@solana/wallet-adapter-react';
-import { lamportsToSol, formatSol, shortenAddress } from '@/utils/solana';
+import { formatLamportsAsSol } from '@/utils/solanaFormatters';
 import { Agent } from '@/utils/mockAgents';
 import { hasUserPaid } from '@/utils/transactions';
+import StatusIndicator from './StatusIndicator';
 import toast from 'react-hot-toast';
 
 type AgentCardProps = {
@@ -23,7 +24,7 @@ export default function AgentCard({ agent, onUse }: AgentCardProps) {
   const isOwner = publicKey && agent.owner === publicKey.toString();
   
   // Format price as SOL
-  const formattedPrice = formatSol(lamportsToSol(agent.price));
+  const formattedPrice = formatLamportsAsSol(agent.price);
   
   // Truncate description if it's too long
   const shortDescription = agent.description.length > 120 
@@ -67,56 +68,83 @@ export default function AgentCard({ agent, onUse }: AgentCardProps) {
     }
   };
   
+  // Determine button style based on conditions
+  const getButtonStyle = () => {
+    if (isLoading) {
+      return 'btn-solana-disabled';
+    }
+    
+    if (!connected) {
+      return 'bg-darkGray text-lightGray cursor-not-allowed';
+    }
+    
+    if (hasPaid || isOwner) {
+      return 'bg-gradient-to-r from-green to-teal text-black shadow-md hover:shadow-lg hover:from-green-dark hover:to-teal';
+    }
+    
+    return 'bg-gradient-to-r from-purple to-blue text-white shadow-md hover:shadow-lg hover:from-purple-dark hover:to-blue-dark';
+  };
+  
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col h-full">
-      <div className="p-6 flex-grow">
-        <div className="flex justify-between items-start">
-          <h3 className="text-xl font-semibold text-gray-800">{agent.name}</h3>
+    <div className="bg-darkGray border border-gray/60 hover:border-purple transition-all duration-300 rounded-xl shadow-md overflow-hidden flex flex-col h-full hover:shadow-solana hover:scale-[1.02]">
+      <div className="p-6 flex-grow relative">
+        {/* Purple glow effect in top-left corner */}
+        <div className="absolute -top-10 -left-10 w-20 h-20 bg-purple/20 rounded-full blur-xl"></div>
+        
+        <div className="flex justify-between items-start mb-3 relative z-10">
+          <h3 className="text-xl font-semibold text-white">{agent.name}</h3>
           {isOwner && (
-            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
-              Your Agent
-            </span>
+            <StatusIndicator status="info" text="Your Agent" size="sm" />
           )}
         </div>
         
-        <p className="text-gray-600 mt-2 mb-4">{shortDescription}</p>
+        <div className="mb-4 h-20 overflow-hidden relative z-10">
+          <p className="text-lightGray">{shortDescription}</p>
+        </div>
         
-        <div className="flex justify-between items-center mt-auto">
+        <div className="flex justify-between items-center mt-auto relative z-10">
           <div className="flex items-center">
-            <span className="text-sm text-gray-500 mr-1">Price:</span>
-            <span className="font-semibold text-blue-600">{formattedPrice} SOL</span>
+            <span className="text-sm text-lightGray mr-1">Price:</span>
+            <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple to-blue">{formattedPrice}</span>
           </div>
           
-          <div className="text-xs text-gray-500 flex items-center">
+          <div className="text-xs text-lightGray flex items-center">
             {hasPaid && !isOwner && (
-              <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded mr-2">
-                Purchased
-              </span>
+              <StatusIndicator status="success" text="Purchased" size="sm" className="mr-2" />
             )}
             <span>Used: {agent.totalCalls} times</span>
           </div>
         </div>
       </div>
       
-      <div className="border-t border-gray-100 p-4">
+      <div className="border-t border-gray/30 p-4 relative">
+        {/* Blue glow effect in bottom-right corner */}
+        <div className="absolute -bottom-10 -right-10 w-20 h-20 bg-blue/20 rounded-full blur-xl"></div>
+        
         <button
           onClick={handleUseClick}
           disabled={isLoading || !connected}
-          className={`w-full py-2 px-4 rounded-md font-medium text-sm focus:outline-none ${
-            isLoading
-              ? 'bg-gray-300 cursor-not-allowed'
-              : connected
-              ? hasPaid || isOwner
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
+          className={`w-full py-2.5 px-4 rounded-lg font-medium text-sm focus:outline-none transition-all duration-200 relative z-10 ${getButtonStyle()}`}
         >
-          {isLoading ? 'Processing...' : 
-           !connected ? 'Connect Wallet to Use' :
-           hasPaid || isOwner ? 'Use Agent' : `Pay ${formattedPrice} SOL to Use`}
+          {isLoading 
+            ? <span className="flex items-center justify-center"><LoadingSpinner /> Processing...</span> 
+            : !connected 
+              ? 'Connect Wallet to Use' 
+              : hasPaid || isOwner 
+                ? 'Use Agent' 
+                : `Pay ${formattedPrice} to Use`
+          }
         </button>
       </div>
     </div>
+  );
+}
+
+function LoadingSpinner() {
+  return (
+    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
   );
 } 

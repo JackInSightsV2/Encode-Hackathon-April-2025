@@ -3,8 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Solana dark theme by default */
+  --background: #000000;
+  --background-secondary: #0F0F1A;
+  --foreground: #FFFFFF;
+  --border-color: #2C2C2C;
+  --accent-purple: #9945FF;
+  --accent-blue: #00C2FF;
+  --accent-green: #14F195;
 }
 
 @theme inline {
@@ -14,15 +20,110 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Solana-styled components */
+@layer components {
+  /* Buttons */
+  .btn-solana-primary {
+    @apply relative overflow-hidden bg-gradient-to-r from-purple to-blue text-white font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-solana focus:outline-none focus:ring-2 focus:ring-purple-light focus:ring-opacity-50;
+  }
+  
+  .btn-solana-secondary {
+    @apply relative overflow-hidden bg-darkGray/80 backdrop-blur-sm border border-purple text-white font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg hover:border-purple-light focus:outline-none focus:ring-2 focus:ring-purple-light focus:ring-opacity-50;
+  }
+  
+  .btn-solana-ghost {
+    @apply relative overflow-hidden bg-transparent border border-gray/60 text-white font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 hover:border-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50;
+  }
+  
+  .btn-solana-disabled {
+    @apply bg-darkGray/50 text-lightGray/60 cursor-not-allowed font-semibold py-2.5 px-6 rounded-lg;
+  }
+  
+  /* Cards */
+  .card-solana {
+    @apply relative overflow-hidden bg-darkGray border border-gray/60 rounded-xl shadow-md hover:border-purple transition-all duration-300 hover:shadow-solana;
+  }
+  
+  .card-solana-active {
+    @apply relative overflow-hidden bg-darkGray border-2 border-purple rounded-xl shadow-md shadow-purple/10;
+  }
+  
+  /* Form elements */
+  .input-solana {
+    @apply bg-darkGray/80 backdrop-blur-sm border border-gray/60 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-light focus:ring-opacity-50 focus:border-purple-light transition-all duration-200;
+  }
+  
+  /* Animations */
+  .shimmer {
+    @apply relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.5s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent;
+  }
+  
+  /* Glow effects */
+  .glow-sm {
+    @apply after:absolute after:inset-0 after:rounded-lg after:shadow-[0_0_15px_rgba(153,69,255,0.5)] after:opacity-0 hover:after:opacity-100 after:transition-opacity after:duration-300;
+  }
+  
+  .glow-purple {
+    @apply relative;
+    text-shadow: 0 0 10px rgba(153, 69, 255, 0.8);
+  }
+  
+  .glow-blue {
+    @apply relative; 
+    text-shadow: 0 0 10px rgba(0, 194, 255, 0.8);
+  }
+  
+  .glow-green {
+    @apply relative;
+    text-shadow: 0 0 10px rgba(20, 241, 149, 0.8);
+  }
+}
+
+/* Glass morphism */
+.glass {
+  @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-lg;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-purple via-blue to-green;
+}
+
+/* Pulsing glow animation */
+@keyframes pulse-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 0.75rem rgba(153, 69, 255, 0.2));
+  }
+  50% { 
+    filter: drop-shadow(0 0 0.75rem rgba(153, 69, 255, 0.6));
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Responsive adjustments */
+.container-responsive {
+  @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-black;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray/60 rounded-full hover:bg-purple transition-colors;
 }
