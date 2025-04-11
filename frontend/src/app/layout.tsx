@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
+import ClientWalletProvider from "../components/ClientWalletProvider";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,14 +16,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Next.js PWA App",
-  description: "Progressive Web App built with Next.js and Tailwind CSS v3",
+  title: "AI Agent Marketplace",
+  description: "A marketplace for AI agents on Solana",
   manifest: "/manifest.json",
   themeColor: "#3490dc",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Next.js PWA App",
+    title: "AI Agent Marketplace",
   },
 };
 
@@ -33,10 +35,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="application-name" content="Next.js PWA App" />
+        <meta name="application-name" content="AI Agent Marketplace" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Next.js PWA App" />
+        <meta name="apple-mobile-web-app-title" content="AI Agent Marketplace" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="icon" href="/favicon.ico" />
@@ -46,7 +48,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ClientWalletProvider>{children}</ClientWalletProvider>
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );
