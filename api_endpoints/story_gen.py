@@ -43,6 +43,4 @@ class StoryGen:
             print(f"Error generating story: {str(e)}")
             raise
 
-    def get_price(self) -> int:
-        """Get the price for story generation service in lamports"""
-        return self.price
+
