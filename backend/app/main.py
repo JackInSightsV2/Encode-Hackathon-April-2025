@@ -15,7 +15,7 @@ from app.services import (
     NewsSummarizer, Translator, SolanaService, DatabaseService
 )
 
-# Import dummy data
+# Import dummy datagiy
 from app.data.dummy_data import DUMMY_ARTICLES
 
 # Load environment variables

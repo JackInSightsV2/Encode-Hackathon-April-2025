@@ -27,11 +27,12 @@ class NewsSummarizer:
                     {
                         "role": "system",
                         "content": """You are a professional news summarizer. 
-                        Create a concise summary that includes:
+                        Create a concise summary of the article that includes:
                         1. Main topic and key points
                         2. Important facts and figures
                         3. Key quotes if available
                         4. Context and implications
+                        
                         Keep the summary under 200 words."""
                     },
                     {
