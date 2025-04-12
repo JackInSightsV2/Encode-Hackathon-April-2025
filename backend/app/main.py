@@ -77,15 +77,15 @@ async def test_summarize(article_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.post("/test/story_gen", response_model=StoryGenRequest)
-async def test_story_gen(request: StoryGenRequest):
+@app.post("/test/story_gen")
+async def test_story_gen(request: dict):
     try:
-        result = await story_gen.generate_story(request)
-        return StoryGenRequest(
+        result = await story_gen.generate_story(request.get("prompt"))
+        return {
             **result,
-            status="success",
-            tx_verified=True    
-        )
+            "status": "success",
+            "tx_verified": True    
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
