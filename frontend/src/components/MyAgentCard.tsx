@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { lamportsToSol, formatSol, shortenAddress } from '@/utils/solana';
 import { Agent } from '@/utils/mockAgents';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 
 type MyAgentCardProps = {
   agent: Agent;
@@ -93,13 +94,14 @@ export default function MyAgentCard({ agent, onEdit, onDelete }: MyAgentCardProp
       </div>
       
       <div className="flex flex-col gap-2 p-4">
-        <button
-          onClick={handleEditClick}
-          disabled={isLoading || !connected}
-          className="w-full py-2 px-4 rounded-md font-medium text-sm focus:outline-none bg-green-500 text-black hover:bg-green-400"
-        >
-          Use Agent
-        </button>
+        <Link href="/api-keys">
+          <button
+            disabled={isLoading || !connected}
+            className="w-full py-2 px-4 rounded-md font-medium text-sm focus:outline-none bg-green-500 text-black hover:bg-green-400 disabled:bg-gray-500 disabled:text-gray-300"
+          >
+            Use Agent
+          </button>
+        </Link>
         
         <div className="text-center text-gray-500 text-xs mt-2">
           {shortenAddress(agent.id, 8)}

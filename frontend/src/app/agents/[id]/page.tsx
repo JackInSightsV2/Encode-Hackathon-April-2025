@@ -241,7 +241,9 @@ export default function AgentDetailPage() {
                 </div>
                 
                 <p className="text-sm text-gray-500 mb-4">
-                  You can now use this endpoint to access the AI agent's services.
+                  <Link href="/api-keys" className="text-blue-600 hover:text-blue-800 underline">
+                    Check your API Keys page for endpoint URL to use this API.
+                  </Link>
                 </p>
                 
                 {inputText && (

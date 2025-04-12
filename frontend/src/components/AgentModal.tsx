@@ -8,6 +8,7 @@ import { formatSol, lamportsToSol } from '@/utils/solana';
 import { invokeAgent, hasUserPaid } from '@/utils/transactions';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
+import Link from 'next/link';
 
 type AgentModalProps = {
   agent: Agent;
@@ -231,7 +232,9 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
                 {agent.endpointUrl}
               </div>
               <p className="mt-3 text-xs text-gray-400">
-                You can now use this endpoint to access the AI agent's services.
+                <Link href="/api-keys" className="text-blue-400 hover:text-blue-300 underline">
+                  Check your API Keys page for endpoint URL to use this API.
+                </Link>
               </p>
               {inputText && !agentResponse && (
                 <div className="mt-4">
