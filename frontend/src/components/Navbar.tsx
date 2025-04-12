@@ -29,9 +29,9 @@ export default function Navbar() {
     { name: 'Register', path: '/register' },
   ];
   
-  // Add API Keys link if wallet is connected
+  // Add API Keys and Wallet links if wallet is connected
   const displayLinks = connected 
-    ? [...navLinks, { name: 'API Keys', path: '/api-keys' }]
+    ? [...navLinks, { name: 'API Keys', path: '/api-keys' }, { name: 'Wallet', path: '/wallet' }]
     : navLinks;
   
   return (
