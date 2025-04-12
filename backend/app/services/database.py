@@ -5,7 +5,14 @@ from datetime import datetime
 
 class DatabaseService:
     def __init__(self):
-        self.db_path = "backend/transactions.db"
+        # Get the absolute path to the backend directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        backend_dir = os.path.dirname(os.path.dirname(current_dir))
+        self.db_path = os.path.join(backend_dir, "transactions.db")
+        
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        
         self.init_db()
 
     def init_db(self):
