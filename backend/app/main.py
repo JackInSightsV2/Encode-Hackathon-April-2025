@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
@@ -12,7 +12,7 @@ from app.models.models import (
 
 # Import services
 from app.services import (
-    NewsSummarizer, Translator, SolanaService, DatabaseService
+    NewsSummarizer, Translator, SolanaService, DatabaseService, SessionManager
 )
 
 # Import dummy datagiy
@@ -45,6 +45,7 @@ story_gen = StoryGen()
 translator = Translator()
 solana_service = SolanaService()
 db_service = DatabaseService()
+session_manager = SessionManager()
 
 # Test endpoints
 @app.get("/test/articles", response_model=list[Article])
@@ -227,6 +228,48 @@ async def get_transaction_history(wallet_address: str):
 
     conn.close()
     return transactions
+
+@app.post("/api/session/create")
+async def create_session(wallet_address: str = Header(..., alias="WalletAddress")):
+    """
+    Create a new session for a wallet address
+    The wallet address should be provided in the WalletAddress header
+    """
+    try:
+        # Validate Solana address
+        if not solana_service.is_valid_solana_address(wallet_address):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid Solana wallet address"
+            )
+
+        session_id = session_manager.create_session(wallet_address)
+        return {
+            "session_id": session_id,
+            "status": "success"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/session/validate")
+async def validate_session(
+    session_id: str,
+    wallet_address: str = Header(..., alias="WalletAddress")
+):
+    """
+    Validate an existing session
+    The wallet address should be provided in the WalletAddress header
+    """
+    try:
+        is_valid = session_manager.validate_session(wallet_address, session_id)
+        return {
+            "is_valid": is_valid,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
