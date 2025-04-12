@@ -47,6 +47,21 @@ class DatabaseService:
             )
         ''')
 
+        # Create api_keys table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS api_keys (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                wallet_address TEXT NOT NULL,
+                name TEXT NOT NULL,
+                api_key TEXT UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_used TIMESTAMP,
+                usage_count INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                UNIQUE(wallet_address, name)
+            )
+        ''')
+
         conn.commit()
         conn.close()
 
@@ -132,4 +147,85 @@ class DatabaseService:
     def is_transaction_used(self, tx_signature: str) -> bool:
         """Check if a transaction has already been used"""
         transaction = self.get_transaction(tx_signature)
-        return transaction is not None and transaction["status"] == "completed" 
+        return transaction is not None and transaction["status"] == "completed"
+
+    def add_api_key(self, wallet_address: str, name: str) -> tuple[str, datetime]:
+        """Add a new API key for a wallet address"""
+        try:
+            # Generate a 64-character API key with alphanumeric characters
+            import random
+            import string
+            api_key = ''.join(random.choices(string.ascii_letters + string.digits, k=64))
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO api_keys (wallet_address, name, api_key)
+                VALUES (?, ?, ?)
+            ''', (wallet_address, name, api_key))
+            conn.commit()
+            conn.close()
+            return api_key, datetime.now()
+        except sqlite3.IntegrityError:
+            raise ValueError("API key name already exists for this wallet")
+
+    def delete_api_key(self, wallet_address: str, name: str) -> bool:
+        """Delete an API key for a wallet address by name"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            DELETE FROM api_keys
+            WHERE wallet_address = ? AND name = ?
+        ''', (wallet_address, name))
+        affected_rows = cursor.rowcount
+        conn.commit()
+        conn.close()
+        return affected_rows > 0
+
+    def get_api_keys(self, wallet_address: str) -> list[dict]:
+        """Get all API keys for a wallet address with their details"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT name, api_key, created_at, last_used, usage_count
+            FROM api_keys
+            WHERE wallet_address = ? AND is_active = TRUE
+            ORDER BY created_at DESC
+        ''', (wallet_address,))
+        
+        api_keys = []
+        for row in cursor.fetchall():
+            api_keys.append({
+                "name": row[0],
+                "api_key": row[1],
+                "created_at": row[2],
+                "last_used": row[3],
+                "usage_count": row[4]
+            })
+        conn.close()
+        return api_keys
+
+    def record_api_key_usage(self, api_key: str):
+        """Record API key usage and update last_used and usage_count"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE api_keys
+            SET last_used = CURRENT_TIMESTAMP,
+                usage_count = usage_count + 1
+            WHERE api_key = ?
+        ''', (api_key,))
+        conn.commit()
+        conn.close()
+
+    def validate_api_key(self, wallet_address: str, api_key: str) -> bool:
+        """Validate if an API key belongs to a wallet address"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT COUNT(*) FROM api_keys
+            WHERE wallet_address = ? AND api_key = ? AND is_active = TRUE
+        ''', (wallet_address, api_key))
+        count = cursor.fetchone()[0]
+        conn.close()
+        return count > 0 
