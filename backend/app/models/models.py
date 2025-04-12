@@ -7,6 +7,10 @@ class Article(BaseModel):
     content: str
     url: str
 
+class StoryGenRequest(BaseModel):
+    prompt: str
+    wallet_address: str
+
 class SummarizeRequest(BaseModel):
     tx_signature: str
     article_url: str
