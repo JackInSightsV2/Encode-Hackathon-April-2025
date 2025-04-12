@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useConnection } from '@solana/wallet-adapter-react';
 import toast from 'react-hot-toast';
 import { formatSolDisplay } from '@/utils/solanaFormatters';
 import { solToLamports } from '@/utils/solana';
+import { registerAgentOnChain } from '@/utils/transactions';
+import { PROGRAM_ID } from '@/utils/programIDL';
 import WalletConnectButton from './WalletConnectButton';
 import Tooltip from './Tooltip';
 
@@ -17,9 +20,12 @@ type AgentFormData = {
 };
 
 export default function AgentForm() {
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, wallet, connecting } = useWallet();
+  const { connection } = useConnection();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
+  const [txSignature, setTxSignature] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   
   const {
     register,
@@ -40,36 +46,113 @@ export default function AgentForm() {
   // Watch form values for the preview
   const formValues = watch();
 
+  // Check wallet status on component mount
+  useEffect(() => {
+    if (connecting) {
+      console.log("Wallet is connecting...");
+    } else if (connected) {
+      console.log("Wallet connected:", publicKey?.toString());
+    } else {
+      console.log("Wallet not connected");
+    }
+  }, [connecting, connected, publicKey]);
+
   const onSubmit = async (data: AgentFormData) => {
-    if (!connected || !publicKey) {
+    if (!connected) {
       toast.error('Please connect your wallet first');
       return;
     }
 
+    if (!publicKey) {
+      toast.error('Public key not available. Please reconnect your wallet.');
+      return;
+    }
+
+    if (!wallet) {
+      toast.error('Wallet adapter not found. Please reconnect your wallet.');
+      return;
+    }
+
+    // Verify the wallet has required signing methods
+    if (!wallet.adapter?.signTransaction || typeof wallet.adapter?.signTransaction !== 'function') {
+      toast.error('Wallet cannot sign transactions. Please use a compatible wallet.');
+      console.error('Wallet missing signing methods:', wallet.adapter);
+      return;
+    }
+
+    // Log wallet status for debugging
+    console.log('Wallet connection status:', {
+      connected,
+      wallet: wallet.adapter?.name,
+      publicKey: publicKey.toString(),
+      hasSignTransaction: !!wallet.adapter?.signTransaction,
+    });
+
     setIsSubmitting(true);
+    setDebugInfo(null);
 
     try {
-      // Calculate price in lamports
-      const priceInLamports = solToLamports(data.price);
-      
-      // For now, we'll just log the data and simulate success
+      // Log the data for debugging
       console.log('Agent registration data:', {
         ...data,
-        priceInLamports,
         owner: publicKey.toString(),
       });
 
-      // TODO: Call the Anchor program to register the agent
-      // This will be implemented when we set up the Anchor client
+      setDebugInfo(`Attempting to register agent with: 
+        Name: ${data.name}
+        Description: ${data.description}
+        Endpoint: ${data.endpointUrl}
+        Price: ${data.price} SOL
+        Wallet: ${publicKey.toString().slice(0, 8)}...
+        Program ID: ${PROGRAM_ID.toString()}
+        Network: Solana Devnet
+      `);
+
+      // Call the Anchor program to register the agent
+      const agentPublicKey = await registerAgentOnChain(
+        data.name,
+        data.description,
+        data.endpointUrl,
+        data.price,
+        wallet,
+        connection
+      );
       
-      // Simulate successful transaction
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Agent registered successfully!');
-      reset();
+      if (agentPublicKey) {
+        setTxSignature(agentPublicKey);
+        toast.success('Agent registered successfully!');
+        reset();
+      } else {
+        toast.error('Failed to register agent. Please check your wallet connection and try again.');
+        setDebugInfo(prevDebug => prevDebug + '\n\nFailed to register agent - null result returned from transaction.');
+      }
     } catch (error) {
       console.error('Error registering agent:', error);
-      toast.error('Failed to register agent. Please try again.');
+      
+      // More specific error handling
+      let errorMessage = 'Failed to register agent: ';
+      
+      if (error instanceof Error) {
+        errorMessage += error.message;
+        
+        // Check for specific error types
+        if (error.message.includes('insufficient funds')) {
+          errorMessage = 'Insufficient funds in your wallet to cover transaction fees.';
+        } else if (error.message.includes('User rejected')) {
+          errorMessage = 'Transaction was rejected in wallet.';
+        } else if (error.message.includes('Signature verification failed')) {
+          errorMessage = 'Signature verification failed. Your wallet may be locked.';
+        } else if (error.message.includes('wallet adapter not found')) {
+          errorMessage = 'Wallet adapter not found. Try refreshing the page and reconnecting.';
+        } else if (error.message.includes('not connected')) {
+          errorMessage = 'Wallet disconnected. Please reconnect your wallet and try again.';
+        }
+      } else {
+        errorMessage += 'Unknown error occurred';
+      }
+      
+      setDebugInfo(`Error details: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -121,6 +204,25 @@ export default function AgentForm() {
         {!previewMode ? (
           <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6 relative z-10">
             <h2 className="text-2xl font-bold mb-6 text-center gradient-text">Register Your AI Agent</h2>
+
+            {/* Wallet Status */}
+            <div className="mb-6 flex items-center justify-between">
+              <div className="text-sm">
+                <span className="text-lightGray mr-2">Wallet:</span>
+                {connected ? (
+                  <span className="text-green-400">Connected ✓</span>
+                ) : connecting ? (
+                  <span className="text-amber-400">Connecting...</span>
+                ) : (
+                  <span className="text-red-400">Not Connected ✗</span>
+                )}
+              </div>
+              {connected && publicKey && (
+                <div className="text-xs text-lightGray">
+                  {publicKey.toString().slice(0, 8)}...{publicKey.toString().slice(-6)}
+                </div>
+              )}
+            </div>
             
             {/* Agent Name */}
             <div>
@@ -249,88 +351,122 @@ export default function AgentForm() {
             <div className="pt-4">
               <button
                 type="submit"
-                className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 relative ${
-                  isSubmitting
-                    ? 'btn-solana-disabled'
-                    : 'bg-gradient-to-r from-purple to-blue text-white shadow-solana hover:shadow-lg'
+                disabled={isSubmitting || !connected || !isValid}
+                className={`w-full py-3 rounded-lg bg-gradient-to-r from-purple to-blue hover:from-purple-dark hover:to-blue-dark text-white font-medium transition-all ${
+                  (isSubmitting || !connected || !isValid) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
-                disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                    <span className="inline-block h-4 w-4 mr-2 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></span>
                     Registering...
                   </span>
+                ) : !connected ? (
+                  'Connect Wallet to Register'
                 ) : (
                   'Register Agent'
                 )}
               </button>
             </div>
+
+            {/* Debug Information */}
+            {debugInfo && (
+              <div className="mt-4 p-3 bg-gray-800 rounded border border-gray-700">
+                <h4 className="text-xs font-mono text-gray-400 mb-1">Debug Info:</h4>
+                <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap">{debugInfo}</pre>
+              </div>
+            )}
           </form>
         ) : (
-          <div className="p-8 relative z-10">
-            <h2 className="text-2xl font-bold mb-6 text-center gradient-text">Agent Preview</h2>
+          <div className="p-8 space-y-6 relative z-10">
+            <h2 className="text-2xl font-bold mb-6 text-center">Agent Preview</h2>
             
-            <div className="card-solana p-6 group hover:scale-[1.01] transition-transform duration-300 relative overflow-hidden">
-              <div className="absolute -top-10 -left-10 w-20 h-20 bg-purple/20 rounded-full blur-xl"></div>
-              
-              <div className="flex justify-between items-start mb-3 relative z-10">
-                <h3 className="text-xl font-semibold text-white">
-                  {formValues.name || "Your Agent Name"}
-                </h3>
-                <span className="bg-blue/20 text-blue px-2 py-0.5 rounded-full text-xs">Your Agent</span>
-              </div>
-              
-              <div className="mb-4 relative z-10">
-                <p className="text-lightGray">
-                  {formValues.description || "Your agent description will appear here. Make sure to write a clear and compelling description that explains what your agent does and why users would want to use it."}
-                </p>
-              </div>
-              
-              <div className="flex justify-between items-center mt-auto relative z-10">
-                <div className="flex items-center">
-                  <span className="text-sm text-lightGray mr-1">Price:</span>
-                  <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple to-blue">
-                    {formValues.price ? formatSolDisplay(formValues.price) : "0.1 SOL"}
-                  </span>
+            <div className="bg-darkGray border border-gray/60 rounded-xl overflow-hidden">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-semibold text-white">{formValues.name || 'Agent Name'}</h3>
+                  <div className="px-2 py-1 bg-purple/20 rounded text-xs text-purple">Preview</div>
                 </div>
                 
-                <div className="text-xs text-lightGray">
-                  <span>Used: 0 times</span>
+                <div className="mb-6">
+                  <p className="text-lightGray">
+                    {formValues.description || 'Your agent description will appear here...'}
+                  </p>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-sm text-lightGray mr-1">Price:</span>
+                    <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple to-blue">
+                      {formValues.price ? formValues.price.toFixed(2) : '0.00'} SOL
+                    </span>
+                  </div>
+                  
+                  <div className="text-xs text-lightGray">
+                    Used: 0 times
+                  </div>
                 </div>
               </div>
               
-              <div className="mt-4 pt-4 border-t border-gray/30 relative z-10">
+              <div className="border-t border-gray/30 p-4">
                 <button
-                  className="w-full py-2.5 px-4 rounded-lg font-medium text-sm bg-gradient-to-r from-green to-teal text-black shadow-md"
+                  disabled
+                  className="w-full py-2.5 px-4 rounded-lg bg-blue-600 text-white font-medium opacity-50 cursor-not-allowed"
                 >
-                  Use Agent
+                  Preview Only
                 </button>
               </div>
             </div>
             
-            <div className="mt-8">
+            <div className="mt-6 text-center">
               <button
-                onClick={() => setPreviewMode(false)}
-                className="w-full py-3 px-4 btn-solana-secondary"
+                onClick={togglePreview}
+                className="text-purple hover:text-white transition-colors"
               >
-                Back to Editing
+                Back to Edit
               </button>
             </div>
           </div>
         )}
       </div>
+      
+      {txSignature && (
+        <div className="mt-6 p-4 bg-green-900/20 border border-green-500/30 rounded-md">
+          <h3 className="text-lg font-medium text-green-400 mb-2">Agent Registered Successfully!</h3>
+          <p className="text-sm text-lightGray mb-2">
+            Your agent has been registered on the Solana blockchain.
+          </p>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-white">Agent ID:</span>
+            <code className="bg-darkGray p-1 rounded text-xs">{txSignature}</code>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(txSignature);
+                toast.success('Agent ID copied to clipboard');
+              }}
+              className="p-1 text-purple hover:text-white"
+            >
+              <CopyIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function InfoIcon({ className = "w-6 h-6" }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function CopyIcon({ className = "w-6 h-6" }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
     </svg>
   );
 } 

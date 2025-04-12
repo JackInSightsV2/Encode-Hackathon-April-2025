@@ -7,13 +7,14 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { fetchAgentById, Agent } from '@/utils/mockAgents';
 import { formatSol, lamportsToSol, shortenAddress } from '@/utils/solana';
-import { invokeAgent, hasUserPaid } from '@/utils/transactions';
+import { invokeAgent, hasUserPaid, fetchAgentsFromChain } from '@/utils/transactions';
 import toast from 'react-hot-toast';
+import { PublicKey } from '@solana/web3.js';
 
 export default function AgentDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { publicKey, connected, signTransaction } = useWallet();
+  const { publicKey, connected, signTransaction, wallet } = useWallet();
   const { connection } = useConnection();
   
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -23,16 +24,46 @@ export default function AgentDetailPage() {
   const [inputText, setInputText] = useState('');
   const [showEndpoint, setShowEndpoint] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [txSignature, setTxSignature] = useState<string | null>(null);
 
   // Get the agent ID from the URL params
   const agentId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  // Fetch agent details
+  // First try to fetch from blockchain, fallback to mock data
   useEffect(() => {
     const loadAgent = async () => {
+      if (!agentId) {
+        toast.error('Invalid agent ID');
+        router.push('/agents');
+        return;
+      }
+
       try {
         setLoading(true);
-        const agentData = await fetchAgentById(agentId);
+        
+        // Try to get agents from blockchain first
+        const chainAgents = await fetchAgentsFromChain(connection);
+        
+        let agentData: Agent | null = null;
+        
+        // If we have blockchain agents, find the one matching our ID
+        if (chainAgents && chainAgents.length > 0) {
+          const foundAgent = chainAgents.find(a => a.id === agentId);
+          if (foundAgent) {
+            agentData = foundAgent;
+            console.log('Found agent on blockchain:', foundAgent);
+          }
+        }
+        
+        // If not found on blockchain, try mock data
+        if (!agentData) {
+          const mockAgent = await fetchAgentById(agentId);
+          if (mockAgent) {
+            agentData = mockAgent;
+            console.log('Using mock agent data:', mockAgent);
+          }
+        }
+        
         if (agentData) {
           setAgent(agentData);
         } else {
@@ -48,7 +79,7 @@ export default function AgentDetailPage() {
     };
 
     loadAgent();
-  }, [agentId, router]);
+  }, [agentId, router, connection]);
 
   // Check if user has already paid for this agent
   useEffect(() => {
@@ -71,7 +102,7 @@ export default function AgentDetailPage() {
   const isOwner = publicKey && agent?.owner === publicKey.toString();
 
   const handlePayment = async () => {
-    if (!connected || !publicKey || !signTransaction || !agent) {
+    if (!connected || !publicKey || !wallet || !agent) {
       toast.error('Please connect your wallet first');
       return;
     }
@@ -79,10 +110,10 @@ export default function AgentDetailPage() {
     setIsProcessing(true);
 
     try {
-      // Invoke the agent with payment
+      // Invoke the agent with payment using real blockchain call
       const success = await invokeAgent(
         agent,
-        { publicKey, signTransaction },
+        wallet,
         connection,
         inputText || undefined
       );
@@ -90,7 +121,13 @@ export default function AgentDetailPage() {
       if (success) {
         setHasPaid(true);
         setShowEndpoint(true);
+        
+        // Display success message with confetti
+        toast.success('Payment successful! You now have access to this agent.');
       }
+    } catch (error) {
+      console.error('Error during payment:', error);
+      toast.error(`Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }

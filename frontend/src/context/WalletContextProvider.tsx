@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletConnectWalletAdapter } from '@solana/wallet-adapter-walletconnect';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
@@ -15,10 +16,11 @@ export default function WalletContextProvider({ children }: { children: React.Re
   // Configure the wallets you want to use
   const wallets = useMemo(
     () => [
+      new PhantomWalletAdapter(),
       new WalletConnectWalletAdapter({
         network: WalletAdapterNetwork.Devnet,
         options: {
-          projectId: 'solana-wallet-connect-project', // Replace with your WalletConnect project ID if available
+          projectId: 'solana-wallet-connect-project',
           metadata: {
             name: 'Solana Hackathon App',
             description: 'Solana Hackathon Application',
@@ -33,7 +35,7 @@ export default function WalletContextProvider({ children }: { children: React.Re
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect={false}>
+      <WalletProvider wallets={wallets} autoConnect={true}>
         <WalletModalProvider>
           {children}
         </WalletModalProvider>

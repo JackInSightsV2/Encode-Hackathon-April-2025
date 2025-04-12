@@ -16,7 +16,7 @@ type AgentModalProps = {
 };
 
 export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, onClose }: AgentModalProps) {
-  const { publicKey, connected, signTransaction } = useWallet();
+  const { publicKey, connected, wallet } = useWallet();
   const { connection } = useConnection();
   const [copied, setCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -25,6 +25,7 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
   const [hasPaid, setHasPaid] = useState(false);
   const [agentResponse, setAgentResponse] = useState<string | null>(null);
   const [isRevealingEndpoint, setIsRevealingEndpoint] = useState(false);
+  const [txSignature, setTxSignature] = useState<string | null>(null);
 
   // Check if the user has already paid for this agent
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
   };
 
   const handlePayment = async () => {
-    if (!connected || !publicKey || !signTransaction) {
+    if (!connected || !publicKey || !wallet) {
       toast.error('Please connect your wallet first');
       return;
     }
@@ -90,10 +91,10 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
     setIsProcessing(true);
 
     try {
-      // Invoke the agent with payment
+      // Invoke the agent with payment using real blockchain transaction
       const success = await invokeAgent(
         agent,
-        { publicKey, signTransaction },
+        wallet,
         connection,
         inputText || undefined
       );
@@ -114,6 +115,9 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
           triggerConfetti();
         }, 500);
       }
+    } catch (error) {
+      console.error('Error during payment:', error);
+      toast.error(`Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -178,7 +182,7 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
                 }`}
               >
                 {isProcessing 
-                  ? 'Processing...' 
+                  ? 'Processing Blockchain Transaction...' 
                   : connected 
                   ? `Pay ${formatSol(lamportsToSol(agent.price))} SOL to Use` 
                   : 'Connect Wallet to Pay'}
