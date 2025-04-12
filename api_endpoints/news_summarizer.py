@@ -57,6 +57,3 @@ class NewsSummarizer:
             print(f"Error summarizing article: {str(e)}")
             raise
 
-    def get_price(self) -> int:
-        """Get the price for the news summarizer service in lamports"""
-        return self.price 
