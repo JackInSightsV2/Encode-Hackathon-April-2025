@@ -1,17 +1,17 @@
-from typing import Optional, Dict
+from typing import Dict
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
+from .base import ExternalAPI
 
-# Load environment variables
 load_dotenv()
 
-class StoryGen:
+class StoryGenAPI(ExternalAPI):
     def __init__(self):
+        super().__init__(price=2000)  # in lamports
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.price = 2000  # in lamports
 
-    async def generate_story(self, prompt: str) -> dict:
+    async def call(self, prompt: str) -> Dict:
         """
         Generate a story based on the given prompt
         """
@@ -36,13 +36,10 @@ class StoryGen:
 
             return {
                 "prompt": prompt,
-                "story": story
+                "story": story,
+                "status": "success"
             }
 
         except Exception as e:
             print(f"Error generating story: {str(e)}")
-            raise
-
-    def get_price(self) -> int:
-        """Get the price for story generation service in lamports"""
-        return self.price
+            raise 

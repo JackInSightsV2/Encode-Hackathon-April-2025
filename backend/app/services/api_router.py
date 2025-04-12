@@ -1,6 +1,8 @@
 from typing import Dict, Any, Optional
 from fastapi import HTTPException
 from ..external_apis.translator import TranslatorAPI
+from ..external_apis.news_summarizer import NewsSummarizerAPI
+from ..external_apis.story_gen import StoryGenAPI
 from .solana_service import SolanaService
 from .database import DatabaseService
 
@@ -10,7 +12,8 @@ class APIRouter:
         self.db_service = DatabaseService()
         self.apis = {
             "translator": TranslatorAPI(),
-            # Add more APIs here as they are moved
+            "news_summarizer": NewsSummarizerAPI(),
+            "story_gen": StoryGenAPI()
         }
 
     async def route_request(
