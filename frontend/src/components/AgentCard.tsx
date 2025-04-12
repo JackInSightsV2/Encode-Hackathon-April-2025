@@ -31,6 +31,9 @@ export default function AgentCard({ agent, onUse }: AgentCardProps) {
     ? `${agent.description.substring(0, 120)}...` 
     : agent.description;
   
+  // Determine if this is a blockchain agent (Solana public keys are 32-44 characters)
+  const isBlockchainAgent = agent.id.length >= 32;
+  
   // Check if user has already paid for this agent
   useEffect(() => {
     if (connected && publicKey) {
@@ -86,13 +89,20 @@ export default function AgentCard({ agent, onUse }: AgentCardProps) {
   };
   
   return (
-    <div className="bg-darkGray border border-gray/60 hover:border-purple transition-all duration-300 rounded-xl shadow-md overflow-hidden flex flex-col h-full hover:shadow-solana hover:scale-[1.02]">
+    <div className={`bg-darkGray border ${isBlockchainAgent ? 'border-green/20' : 'border-gray/60'} hover:border-purple transition-all duration-300 rounded-xl shadow-md overflow-hidden flex flex-col h-full hover:shadow-solana hover:scale-[1.02]`}>
       <div className="p-6 flex-grow relative">
         {/* Purple glow effect in top-left corner */}
         <div className="absolute -top-10 -left-10 w-20 h-20 bg-purple/20 rounded-full blur-xl"></div>
         
         <div className="flex justify-between items-start mb-3 relative z-10">
-          <h3 className="text-xl font-semibold text-white">{agent.name}</h3>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-xl font-semibold text-white">{agent.name}</h3>
+            {isBlockchainAgent && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-900/30 text-green-400 border border-green-700/20">
+                Chain
+              </span>
+            )}
+          </div>
           {isOwner && (
             <StatusIndicator status="info" text="Your Agent" size="sm" />
           )}
@@ -135,6 +145,12 @@ export default function AgentCard({ agent, onUse }: AgentCardProps) {
                 : `Pay ${formattedPrice} to Use`
           }
         </button>
+        
+        {isBlockchainAgent && (
+          <div className="mt-2 text-center">
+            <span className="text-xs font-mono text-gray-500 truncate block">{agent.id.substring(0, 8)}...{agent.id.substring(agent.id.length - 8)}</span>
+          </div>
+        )}
       </div>
     </div>
   );
