@@ -12,10 +12,10 @@ from app.models.models import (
 
 # Import services
 from app.services import (
-    NewsSummarizer, Translator, SolanaService, DatabaseService, SessionManager
+    NewsSummarizer, Translator, SolanaService, DatabaseService, SessionManager, APIRouter
 )
 
-# Import dummy datagiy
+# Import dummy data
 from app.data.dummy_data import DUMMY_ARTICLES
 
 # Import story generation
@@ -40,11 +40,7 @@ app.add_middleware(
 )
 
 # Initialize services
-news_summarizer = NewsSummarizer()
-story_gen = StoryGen()
-translator = Translator()
-solana_service = SolanaService()
-db_service = DatabaseService()
+api_router = APIRouter()
 session_manager = SessionManager()
 
 # Test endpoints
@@ -66,7 +62,7 @@ async def test_summarize(article_id: int):
         raise HTTPException(status_code=404, detail="Article not found")
     
     try:
-        result = await news_summarizer.summarize(
+        result = await NewsSummarizer().summarize(
             article_url=article["url"],
             article_text=article["content"]
         )
@@ -81,7 +77,7 @@ async def test_summarize(article_id: int):
 @app.post("/test/story_gen")
 async def test_story_gen(request: dict):
     try:
-        result = await story_gen.generate_story(request.get("prompt"))
+        result = await StoryGen().generate_story(request.get("prompt"))
         return {
             **result,
             "status": "success",
@@ -95,116 +91,55 @@ async def test_story_gen(request: dict):
 async def health_check():
     return {"status": "healthy"}
 
-@app.post("/api/news/summarize", response_model=SummarizeResponse)
-async def summarize_article(request: SummarizeRequest) -> SummarizeResponse:
+@app.post("/api/{api_name}")
+async def route_api_request(
+    api_name: str,
+    request: dict,
+    wallet_address: str = Header(..., alias="WalletAddress")
+):
+    """
+    Route API requests based on the API name and verify wallet balance
+    """
     try:
-        if db_service.is_transaction_used(request.tx_signature):
-            raise HTTPException(status_code=403, detail="Transaction already used")
+        # Validate wallet address
+        if not api_router.solana_service.is_valid_solana_address(wallet_address):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid Solana wallet address"
+            )
 
-        tx_verified = await solana_service.verify_transaction(
-            tx_signature=request.tx_signature,
-            expected_agent_id="news_summarizer",
-            expected_price=news_summarizer.price,
-            wallet_address=request.wallet_address
+        # Route the request
+        result = await api_router.route_request(
+            wallet_address=wallet_address,
+            api_name=api_name,
+            **request
         )
 
-        if not tx_verified:
-            raise HTTPException(status_code=403, detail="Invalid transaction")
+        return result
 
-        transaction_id = db_service.record_transaction(
-            tx_signature=request.tx_signature,
-            wallet_address=request.wallet_address,
-            agent_id="news_summarizer",
-            amount=news_summarizer.price
-        )
-
-        result = await news_summarizer.summarize(
-            article_url=request.article_url,
-            article_text=request.article_text
-        )
-
-        db_service.record_usage(
-            transaction_id=transaction_id,
-            agent_id="news_summarizer",
-            input_text=request.article_text or request.article_url,
-            output_text=result["summary"]
-        )
-
-        return SummarizeResponse(
-            **result,
-            status="success",
-            tx_verified=True
-        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/translator/languages")
-async def get_supported_languages():
-    return translator.get_supported_languages()
-
-@app.post("/api/translator/translate", response_model=TranslationResponse)
-async def translate_text(request: TranslationRequest) -> TranslationResponse:
-    try:
-        if db_service.is_transaction_used(request.tx_signature):
-            raise HTTPException(status_code=403, detail="Transaction already used")
-
-        tx_verified = await solana_service.verify_transaction(
-            tx_signature=request.tx_signature,
-            expected_agent_id="translator",
-            expected_price=translator.price,
-            wallet_address=request.wallet_address
-        )
-
-        if not tx_verified:
-            raise HTTPException(status_code=403, detail="Invalid transaction")
-
-        transaction_id = db_service.record_transaction(
-            tx_signature=request.tx_signature,
-            wallet_address=request.wallet_address,
-            agent_id="translator",
-            amount=translator.price
-        )
-
-        result = await translator.translate(
-            text=request.text,
-            target_language=request.target_language,
-            source_language=request.source_language
-        )
-
-        db_service.record_usage(
-            transaction_id=transaction_id,
-            agent_id="translator",
-            input_text=request.text,
-            output_text=result["translated_text"]
-        )
-
-        return TranslationResponse(
-            **result,
-            status="success",
-            tx_verified=True
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/test/translate")
-async def test_translate(request: dict):
-    try:
-        result = await translator.translate(
-            text=request.get("text"),
-            target_language=request.get("target_language"),
-            source_language=request.get("source_language")
-        )
-        return {
-            **result,
-            "status": "success",
-            "tx_verified": True
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/api/prices/{api_name}")
+async def get_api_price(api_name: str):
+    """
+    Get the price for a specific API
+    """
+    price = api_router.get_api_price(api_name)
+    if price is None:
+        raise HTTPException(status_code=404, detail=f"API {api_name} not found")
+    
+    return {
+        "api_name": api_name,
+        "price": price,
+        "price_in_sol": price / 1_000_000_000  # Convert lamports to SOL
+    }
 
 @app.get("/api/transactions/{wallet_address}", response_model=list[TransactionHistory])
 async def get_transaction_history(wallet_address: str):
-    conn = sqlite3.connect(db_service.db_path)
+    conn = sqlite3.connect(DatabaseService().db_path)
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -237,7 +172,7 @@ async def create_session(wallet_address: str = Header(..., alias="WalletAddress"
     """
     try:
         # Validate Solana address
-        if not solana_service.is_valid_solana_address(wallet_address):
+        if not SolanaService().is_valid_solana_address(wallet_address):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid Solana wallet address"

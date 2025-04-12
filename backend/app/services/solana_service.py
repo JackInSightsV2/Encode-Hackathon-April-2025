@@ -36,6 +36,26 @@ class SolanaService:
         except Exception:
             return False
 
+    async def verify_wallet_balance(self, wallet_address: str, required_amount: int) -> bool:
+        """
+        Verify if a wallet has enough balance for a transaction
+        """
+        try:
+            # Get the wallet balance
+            balance_info = self.client.get_balance(wallet_address)
+            if not balance_info or "result" not in balance_info:
+                return False
+
+            # Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
+            balance_lamports = balance_info["result"]["value"]
+            
+            # Check if balance is sufficient
+            return balance_lamports >= required_amount
+
+        except Exception as e:
+            print(f"Error verifying wallet balance: {str(e)}")
+            return False
+
     async def verify_transaction(
         self,
         tx_signature: str,

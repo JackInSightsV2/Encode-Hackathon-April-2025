@@ -4,5 +4,6 @@ from .solana_service import SolanaService
 from .database import DatabaseService
 from .story_gen import StoryGen
 from .session_manager import SessionManager
+from .api_router import APIRouter
 
-__all__ = ['NewsSummarizer', 'Translator', 'SolanaService', 'DatabaseService', 'StoryGen', 'SessionManager']
+__all__ = ['NewsSummarizer', 'Translator', 'SolanaService', 'DatabaseService', 'StoryGen', 'SessionManager', 'APIRouter']
