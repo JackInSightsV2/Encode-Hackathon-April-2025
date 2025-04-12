@@ -9,23 +9,19 @@ from datetime import datetime
 
 # Import models
 from app.models.models import (
-    Article, SummarizeRequest, SummarizeResponse,
-    TranslationRequest, TranslationResponse, TransactionHistory, StoryGenRequest
+    Article, TransactionHistory
 )
 
 # Import services
 from app.services import (
     SolanaService, DatabaseService, SessionManager, APIRouter
 )
-from app.services.api_key_manager import APIKeyManager
-
-# Import external APIs
-from app.external_apis import NewsSummarizerAPI
-from app.external_apis.translator import TranslatorAPI
-from app.external_apis.story_gen import StoryGenAPI
 
 # Import dummy data
 from app.data.dummy_data import DUMMY_ARTICLES
+
+# Import story generation
+from app.services.story_gen import StoryGen
 
 # Load environment variables
 load_dotenv()
@@ -70,7 +66,7 @@ async def test_summarize(article_id: int):
         raise HTTPException(status_code=404, detail="Article not found")
     
     try:
-        result = await NewsSummarizerAPI().summarize(
+        result = await NewsSummarizer().summarize(
             article_url=article["url"],
             article_text=article["content"]
         )
@@ -85,7 +81,7 @@ async def test_summarize(article_id: int):
 @app.post("/test/story_gen")
 async def test_story_gen(request: dict):
     try:
-        result = await StoryGenAPI().call(prompt=request.get("prompt"))
+        result = await StoryGen().generate_story(request.get("prompt"))
         return {
             **result,
             "status": "success",

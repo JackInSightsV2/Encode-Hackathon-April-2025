@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone', // Enable standalone output for Docker
   webpack: (config, { isServer, dev }) => {
     // Add the fallbacks for Node.js modules
     if (!isServer) {

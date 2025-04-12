@@ -82,9 +82,7 @@ class Translator:
             print(f"Error translating text: {str(e)}")
             raise
 
-    def get_price(self) -> int:
-        """Get the price for translation service in lamports"""
-        return self.price
+
 
     def get_supported_languages(self) -> Dict[str, str]:
         """Get list of supported languages"""
