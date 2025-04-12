@@ -7,7 +7,7 @@ import sqlite3
 # Import models
 from app.models.models import (
     Article, SummarizeRequest, SummarizeResponse,
-    TranslationRequest, TranslationResponse, TransactionHistory
+    TranslationRequest, TranslationResponse, TransactionHistory, StoryGenRequest
 )
 
 # Import services
@@ -17,6 +17,9 @@ from app.services import (
 
 # Import dummy data
 from app.data.dummy_data import DUMMY_ARTICLES
+
+# Import story generation
+from app.services.story_gen import StoryGen
 
 # Load environment variables
 load_dotenv()
@@ -38,6 +41,7 @@ app.add_middleware(
 
 # Initialize services
 news_summarizer = NewsSummarizer()
+story_gen = StoryGen()
 translator = Translator()
 solana_service = SolanaService()
 db_service = DatabaseService()
@@ -69,6 +73,18 @@ async def test_summarize(article_id: int):
             **result,
             status="success",
             tx_verified=True
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/test/story_gen", response_model=StoryGenRequest)
+async def test_story_gen(request: StoryGenRequest):
+    try:
+        result = await story_gen.generate_story(request)
+        return StoryGenRequest(
+            **result,
+            status="success",
+            tx_verified=True    
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
