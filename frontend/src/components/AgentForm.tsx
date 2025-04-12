@@ -73,10 +73,10 @@ export default function AgentForm() {
       return;
     }
 
-    // Verify the wallet has required signing methods
-    if (!wallet.adapter?.signTransaction || typeof wallet.adapter?.signTransaction !== 'function') {
-      toast.error('Wallet cannot sign transactions. Please use a compatible wallet.');
-      console.error('Wallet missing signing methods:', wallet.adapter);
+    // Verify the wallet has required methods
+    if (!wallet.adapter?.sendTransaction || typeof wallet.adapter?.sendTransaction !== 'function') {
+      toast.error('Wallet cannot send transactions. Please use a compatible wallet.');
+      console.error('Wallet missing transaction methods:', wallet.adapter);
       return;
     }
 
@@ -85,7 +85,7 @@ export default function AgentForm() {
       connected,
       wallet: wallet.adapter?.name,
       publicKey: publicKey.toString(),
-      hasSignTransaction: !!wallet.adapter?.signTransaction,
+      hasSendTransaction: !!wallet.adapter?.sendTransaction,
     });
 
     setIsSubmitting(true);
@@ -108,7 +108,7 @@ export default function AgentForm() {
         Network: Solana Devnet
       `);
 
-      // Call the Anchor program to register the agent
+      // Call the registerAgentOnChain function with the form data
       const agentPublicKey = await registerAgentOnChain(
         data.name,
         data.description,
@@ -126,6 +126,7 @@ export default function AgentForm() {
         toast.error('Failed to register agent. Please check your wallet connection and try again.');
         setDebugInfo(prevDebug => prevDebug + '\n\nFailed to register agent - null result returned from transaction.');
       }
+      
     } catch (error) {
       console.error('Error registering agent:', error);
       
