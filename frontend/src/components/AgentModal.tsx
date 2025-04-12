@@ -125,13 +125,13 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-darkGray rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray/30">
         <div className="p-6">
           <div className="flex justify-between items-start">
-            <h3 className="text-xl font-bold text-gray-800">{agent.name}</h3>
+            <h3 className="text-xl font-bold text-white">{agent.name}</h3>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
+              className="text-lightGray hover:text-white transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -139,30 +139,30 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
             </button>
           </div>
           
-          <p className="text-gray-600 mt-4">{agent.description}</p>
+          <p className="text-lightGray mt-4">{agent.description}</p>
           
           <div className="mt-6">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-500">Price:</span>
-              <span className="font-semibold text-blue-600">{formatSol(lamportsToSol(agent.price))} SOL</span>
+              <span className="text-sm text-lightGray">Price:</span>
+              <span className="font-semibold text-purple">{formatSol(lamportsToSol(agent.price))} SOL</span>
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500">Used:</span>
-              <span className="text-sm">{agent.totalCalls} times</span>
+              <span className="text-sm text-lightGray">Used:</span>
+              <span className="text-sm text-white">{agent.totalCalls} times</span>
             </div>
           </div>
           
           {!showEndpoint && !hasPaid && (
             <div className="mt-6">
               <div className="mb-4">
-                <label htmlFor="agent-input" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="agent-input" className="block text-sm font-medium text-white mb-1">
                   Input (Optional)
                 </label>
                 <textarea
                   id="agent-input"
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple"
                   placeholder="Enter any additional input for the agent..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
@@ -173,12 +173,12 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
               <button
                 onClick={handlePayment}
                 disabled={isProcessing || !connected}
-                className={`w-full py-3 px-4 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full py-3 px-4 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-purple ${
                   isProcessing
-                    ? 'bg-gray-300 cursor-not-allowed'
+                    ? 'bg-gray-700 cursor-not-allowed'
                     : connected
                     ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 {isProcessing 
@@ -189,7 +189,7 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
               </button>
               
               {!connected && (
-                <p className="mt-2 text-sm text-amber-600">
+                <p className="mt-2 text-sm text-amber-500">
                   Please connect your wallet to pay for this agent.
                 </p>
               )}
@@ -197,28 +197,28 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
           )}
           
           {agentResponse && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-md">
-              <h4 className="font-medium text-gray-800 mb-2">Agent Response</h4>
-              <div className="bg-white p-3 rounded border border-blue-100 text-sm whitespace-pre-line">
+            <div className="mt-6 p-4 bg-gray-800 rounded-md">
+              <h4 className="font-medium text-white mb-2">Agent Response</h4>
+              <div className="bg-gray-900 p-3 rounded border border-gray-700 text-sm text-lightGray whitespace-pre-line">
                 {agentResponse}
               </div>
             </div>
           )}
           
           {(showEndpoint || hasPaid) && (
-            <div className={`mt-6 p-4 bg-gray-50 rounded-md transition-all duration-500 ${isRevealingEndpoint ? 'scale-105' : 'scale-100'}`}>
+            <div className={`mt-6 p-4 bg-gray-800 rounded-md transition-all duration-500 ${isRevealingEndpoint ? 'scale-105' : 'scale-100'}`}>
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-medium text-gray-800">Endpoint URL</h4>
+                <h4 className="font-medium text-white">Endpoint URL</h4>
                 <div className="inline-flex items-center">
-                  <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded mr-2">
+                  <span className="bg-green-900 text-green-400 text-xs font-medium px-2.5 py-0.5 rounded mr-2">
                     Unlocked
                   </span>
                   {copied ? (
-                    <span className="text-green-600 text-xs">Copied!</span>
+                    <span className="text-green-400 text-xs">Copied!</span>
                   ) : (
                     <button
                       onClick={copyEndpoint}
-                      className="text-blue-600 hover:text-blue-800"
+                      className="text-blue-400 hover:text-blue-300"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
@@ -227,16 +227,16 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
                   )}
                 </div>
               </div>
-              <div className="bg-gray-100 p-3 rounded break-all font-mono text-sm">
+              <div className="bg-gray-900 p-3 rounded break-all font-mono text-sm text-lightGray">
                 {agent.endpointUrl}
               </div>
-              <p className="mt-3 text-xs text-gray-500">
+              <p className="mt-3 text-xs text-gray-400">
                 You can now use this endpoint to access the AI agent's services.
               </p>
               {inputText && !agentResponse && (
                 <div className="mt-4">
-                  <h5 className="text-sm font-medium text-gray-700 mb-1">Input provided:</h5>
-                  <div className="bg-gray-100 p-2 rounded text-xs font-mono break-words">
+                  <h5 className="text-sm font-medium text-white mb-1">Input provided:</h5>
+                  <div className="bg-gray-900 p-2 rounded text-xs font-mono break-words text-lightGray">
                     {inputText}
                   </div>
                 </div>
