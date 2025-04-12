@@ -5,10 +5,12 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import WalletConnectButton from './WalletConnectButton';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  const { connected } = useWallet();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -26,6 +28,11 @@ export default function Navbar() {
     { name: 'My Agents', path: '/my-agents' },
     { name: 'Register', path: '/register' },
   ];
+  
+  // Add API Keys link if wallet is connected
+  const displayLinks = connected 
+    ? [...navLinks, { name: 'API Keys', path: '/api-keys' }]
+    : navLinks;
   
   return (
     <nav className={`sticky top-0 z-50 transition-all duration-300 font-[family-name:var(--font-geist-sans)] ${
@@ -47,7 +54,7 @@ export default function Navbar() {
         
         {/* Navigation links - hide on mobile */}
         <div className="hidden md:flex items-center space-x-6">
-          {navLinks.map((link) => (
+          {displayLinks.map((link) => (
             <Link 
               key={link.path} 
               href={link.path}
@@ -71,7 +78,7 @@ export default function Navbar() {
       
       {/* Mobile navigation - slide down when menu button is clicked */}
       <div className="md:hidden pt-4 pb-2 px-4 flex overflow-x-auto gap-4 border-t border-gray/20 mt-3">
-        {navLinks.map((link) => (
+        {displayLinks.map((link) => (
           <Link 
             key={link.path} 
             href={link.path}

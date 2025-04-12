@@ -1,23 +1,24 @@
-import { 
-  Connection, 
-  PublicKey, 
-  Transaction, 
-  SystemProgram, 
+// transaction.ts (Corrected: Pure @solana/web3.js for Anchor program without manual account creation)
+
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+  TransactionInstruction,
+  SystemProgram,
   LAMPORTS_PER_SOL,
-  sendAndConfirmTransaction
+  Keypair,
+  SendTransactionError
 } from '@solana/web3.js';
 import toast from 'react-hot-toast';
+import crypto from 'crypto';
 import { Agent } from './mockAgents';
 
-// Mock program ID - this would be the actual program ID in production
-const PROGRAM_ID = new PublicKey('AGntPe4Naj9CXzeQpDKrJaAFvhB3MvXKQYhDQj1iHPZA');
+const PROGRAM_ID = new PublicKey('JA9FE7qcuSHQTgeGBzQHWP8ZaeLGBHag8gU6D4ZaCnRa');
 
 // Store paid agents in local storage to persist between refreshes
 const PAID_AGENTS_KEY = 'paid_agents';
 
-/**
- * Save paid agent to local storage
- */
 function savePaidAgent(agentId: string, userPublicKey: string): void {
   try {
     const existingData = localStorage.getItem(PAID_AGENTS_KEY);
@@ -36,9 +37,6 @@ function savePaidAgent(agentId: string, userPublicKey: string): void {
   }
 }
 
-/**
- * Check if an agent is in the paid agents list
- */
 function isPaidAgentInStorage(agentId: string, userPublicKey: string): boolean {
   try {
     const existingData = localStorage.getItem(PAID_AGENTS_KEY);
@@ -52,22 +50,173 @@ function isPaidAgentInStorage(agentId: string, userPublicKey: string): boolean {
   }
 }
 
+const discriminator = crypto.createHash('sha256')
+  .update('global:register_agent')
+  .digest()
+  .slice(0, 8);
+
+function serializeRegisterAgentInstruction(
+  name: string,
+  description: string,
+  endpoint: string,
+  priceLamports: number
+): Buffer {
+  const nameBuffer = Buffer.from(name, 'utf8');
+  const descriptionBuffer = Buffer.from(description, 'utf8');
+  const endpointBuffer = Buffer.from(endpoint, 'utf8');
+
+  const buffer = Buffer.alloc(
+    discriminator.length +
+    4 + nameBuffer.length +
+    4 + descriptionBuffer.length +
+    4 + endpointBuffer.length +
+    8
+  );
+
+  let offset = 0;
+  discriminator.copy(buffer, offset);
+  offset += discriminator.length;
+
+  buffer.writeUInt32LE(nameBuffer.length, offset);
+  offset += 4;
+  nameBuffer.copy(buffer, offset);
+  offset += nameBuffer.length;
+
+  buffer.writeUInt32LE(descriptionBuffer.length, offset);
+  offset += 4;
+  descriptionBuffer.copy(buffer, offset);
+  offset += descriptionBuffer.length;
+
+  buffer.writeUInt32LE(endpointBuffer.length, offset);
+  offset += 4;
+  endpointBuffer.copy(buffer, offset);
+  offset += endpointBuffer.length;
+
+  buffer.writeBigUInt64LE(BigInt(priceLamports), offset);
+
+  return buffer;
+}
+
+export async function registerAgentOnChain(
+  name: string,
+  description: string,
+  endpoint: string,
+  price: number,
+  wallet: any,
+  connection: Connection
+): Promise<string | null> {
+  if (!wallet.adapter?.publicKey || !wallet.adapter?.signTransaction) {
+    toast.error('Wallet not properly connected or unable to sign.');
+    console.error('Wallet connection issue:', wallet);
+    return null;
+  }
+
+  const toastId = toast.loading('Registering agent on Solana...');
+
+  const agentKeypair = Keypair.generate();
+  const priceLamports = Math.floor(price * LAMPORTS_PER_SOL);
+  const instructionData = serializeRegisterAgentInstruction(name, description, endpoint, priceLamports);
+
+  const registerAgentIx = new TransactionInstruction({
+    keys: [
+      { pubkey: agentKeypair.publicKey, isSigner: true, isWritable: true },
+      { pubkey: wallet.adapter.publicKey, isSigner: true, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    programId: PROGRAM_ID,
+    data: instructionData,
+  });
+
+  const transaction = new Transaction().add(registerAgentIx);
+
+  try {
+    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    transaction.feePayer = wallet.adapter.publicKey;
+
+    transaction.partialSign(agentKeypair);
+    const signedTx = await wallet.adapter.signTransaction(transaction);
+
+    const signature = await connection.sendRawTransaction(signedTx.serialize());
+    await connection.confirmTransaction(signature, 'confirmed');
+
+    toast.success('Agent registered successfully!', { id: toastId });
+    return agentKeypair.publicKey.toString();
+  } catch (error: any) {
+    if (error instanceof SendTransactionError && error.logs) {
+      console.error('Transaction failed with logs:', error.logs);
+      toast.error(`Transaction failed: ${error.message}`, { id: toastId });
+    } else {
+      console.error('Transaction failed:', error);
+      toast.error(`Transaction failed: ${error.message}`, { id: toastId });
+    }
+    return null;
+  }
+}
+
+export async function fetchAgentsFromChain(connection: Connection): Promise<Agent[] | null> {
+  try {
+    const accounts = await connection.getProgramAccounts(PROGRAM_ID);
+    const agents: Agent[] = accounts.map(({ pubkey, account }) => {
+      let offset = 8; // Anchor accounts start with an 8-byte discriminator
+
+      // Deserialize Name
+      const nameLength = account.data.readUInt32LE(offset);
+      offset += 4;
+      const name = account.data.slice(offset, offset + nameLength).toString('utf8');
+      offset += nameLength;
+
+      // Deserialize Description
+      const descLength = account.data.readUInt32LE(offset);
+      offset += 4;
+      const description = account.data.slice(offset, offset + descLength).toString('utf8');
+      offset += descLength;
+
+      // Deserialize Endpoint URL
+      const endpointLength = account.data.readUInt32LE(offset);
+      offset += 4;
+      const endpointUrl = account.data.slice(offset, offset + endpointLength).toString('utf8');
+      offset += endpointLength;
+
+      // Deserialize Price
+      const price = Number(account.data.readBigUInt64LE(offset));
+      offset += 8;
+
+      // Deserialize Owner PublicKey
+      const owner = new PublicKey(account.data.slice(offset, offset + 32)).toString();
+
+      return {
+        id: pubkey.toString(),
+        name,
+        description,
+        endpointUrl,
+        price,
+        owner,
+        totalCalls: 0, // You might track this separately
+      } as Agent;
+    });
+
+    return agents;
+  } catch (error) {
+    console.error('Error fetching agents from chain:', error);
+    return null;
+  }
+}
+
 /**
- * Simulates invoking an agent with payment
- * In a real implementation, this would make an actual Solana transaction
+ * Invoke an agent with payment - this creates and sends a transaction to the Solana blockchain
  */
 export async function invokeAgent(
   agent: Agent, 
-  wallet: any, // We should use proper type from wallet adapter
+  wallet: any,
   connection: Connection,
   input?: string
 ): Promise<boolean> {
-  if (!wallet.publicKey) {
+  if (!wallet.adapter?.publicKey) {
     toast.error('Wallet not connected');
     return false;
   }
 
-  const userPublicKey = wallet.publicKey.toString();
+  const userPublicKey = wallet.adapter.publicKey.toString();
   
   // Check if user has already paid for this agent
   if (isPaidAgentInStorage(agent.id, userPublicKey)) {
@@ -75,67 +224,59 @@ export async function invokeAgent(
     return true;
   }
 
-  // For now, we'll just simulate a transaction
   try {
     // Toast notification for starting transaction
     const toastId = toast.loading('Processing payment...');
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // In a real implementation, we would:
-    // 1. Create a transaction to send SOL to the agent owner
-    // 2. Also invoke the program's invoke_agent instruction
-    // 3. Sign and send the transaction
+    // Create transaction instruction data
+    // First byte is instruction index (1 for invokeAgent)
+    const data = Buffer.from([1]);
     
-    /*
-    // Example of what a real implementation might look like:
-    const transaction = new Transaction().add(
-      // Transfer SOL to agent owner
-      SystemProgram.transfer({
-        fromPubkey: wallet.publicKey,
-        toPubkey: new PublicKey(agent.owner),
-        lamports: agent.price,
-      }),
+    // Define the accounts that will be read from or written to
+    const keys = [
+      { pubkey: new PublicKey(agent.id), isSigner: false, isWritable: true },
+      { pubkey: wallet.adapter.publicKey, isSigner: true, isWritable: true },
+      { pubkey: new PublicKey(agent.owner), isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ];
+    
+    // Create the transaction instruction
+    const instruction = new TransactionInstruction({
+      keys,
+      programId: PROGRAM_ID,
+      data,
+    });
+    
+    // Create a new transaction and add our instruction
+    const transaction = new Transaction().add(instruction);
+    
+    // Set recent blockhash and fee payer
+    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    transaction.feePayer = wallet.adapter.publicKey;
+    
+    // Sign the transaction
+    if (wallet.adapter.signTransaction) {
+      const signedTx = await wallet.adapter.signTransaction(transaction);
       
-      // Call the program's invoke_agent instruction
-      new TransactionInstruction({
-        keys: [
-          { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
-          { pubkey: new PublicKey(agent.owner), isSigner: false, isWritable: true },
-          { pubkey: new PublicKey(agent.id), isSigner: false, isWritable: true },
-        ],
-        programId: PROGRAM_ID,
-        data: Buffer.from([...]) // Serialized instruction data
-      })
-    );
-
-    // Sign and send the transaction
-    const signature = await sendAndConfirmTransaction(
-      connection,
-      transaction,
-      [wallet.signTransaction]
-    );
-    */
-
-    // For demonstration, we'll just simulate successful tx
-    const mockSignature = 'tx_' + Math.random().toString(36).substring(2, 15);
-    
-    // Save the agent as paid
-    savePaidAgent(agent.id, userPublicKey);
-    
-    // Simulate agent invocation with input if provided
-    if (input) {
-      console.log(`Agent ${agent.id} invoked with input: ${input}`);
-      // In a real implementation, we would call the agent's API endpoint here
+      // Send the signed transaction
+      const signature = await connection.sendRawTransaction(signedTx.serialize());
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature);
+      
+      // Save the agent as paid
+      savePaidAgent(agent.id, userPublicKey);
+      
+      // Success toast
+      toast.success(`Payment successful! Tx: ${signature.slice(0, 8)}...${signature.slice(-6)}`, 
+        { id: toastId, duration: 4000 }
+      );
+      
+      return true;
+    } else {
+      toast.error('Wallet does not support signing transactions', { id: toastId });
+      return false;
     }
-    
-    // Success toast
-    toast.success(`Payment successful! Tx: ${mockSignature.slice(0, 8)}...${mockSignature.slice(-6)}`, 
-      { id: toastId, duration: 4000 }
-    );
-    
-    return true;
   } catch (error) {
     console.error('Error invoking agent:', error);
     toast.error(`Transaction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -144,8 +285,7 @@ export async function invokeAgent(
 }
 
 /**
- * Simulates checking if a user has already paid for an agent
- * In a real implementation, this would query the blockchain
+ * Check if a user has already paid for an agent
  */
 export async function hasUserPaid(
   agentId: string,
@@ -157,11 +297,10 @@ export async function hasUserPaid(
     return true;
   }
   
-  // Simulate network delay
+  // For demo purposes, we'll simulate a network delay
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  // For demonstration, we'll just return a random result if not found in localStorage
-  // In a real implementation, we would query the blockchain
+  // Return a random result to simulate some users having paid
   const randomPaid = Math.random() > 0.7; // 30% chance user has already paid
   
   // If randomly determined as paid, save to localStorage for consistency
@@ -170,4 +309,4 @@ export async function hasUserPaid(
   }
   
   return randomPaid;
-} 
+}

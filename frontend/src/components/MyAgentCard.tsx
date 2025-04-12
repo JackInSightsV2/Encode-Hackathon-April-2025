@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { lamportsToSol, formatSol, shortenAddress } from '@/utils/solana';
 import { Agent } from '@/utils/mockAgents';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 
 type MyAgentCardProps = {
   agent: Agent;
@@ -66,65 +67,44 @@ export default function MyAgentCard({ agent, onEdit, onDelete }: MyAgentCardProp
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col h-full">
+    <div className="card-solana overflow-hidden flex flex-col h-full bg-gray-900 rounded-xl border border-gray-800">
       <div className="p-6 flex-grow">
-        <div className="flex justify-between items-start">
-          <h3 className="text-xl font-semibold text-gray-800">{agent.name}</h3>
-          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
-            Your Agent
-          </span>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-xl font-semibold text-white">{agent.name}</h3>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-green-400">Chain</span>
+            <span className="h-2 w-2 rounded-full bg-white"></span>
+            <span className="text-xs text-white">Your Agent</span>
+          </div>
         </div>
         
-        <p className="text-gray-600 mt-2 mb-4">{agent.description}</p>
+        <p className="text-gray-400 mt-2 mb-4 text-sm">{agent.description}</p>
         
-        <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-500">Price:</span>
-            <span className="font-semibold text-blue-600">{formattedPrice} SOL</span>
+        <div className="mt-4 space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-400">Price:</span>
+            <span className="font-semibold text-green-400">{formattedPrice} SOL</span>
           </div>
           
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-500">Endpoint:</span>
-            <span className="font-mono text-xs text-gray-800 truncate max-w-[180px]">{agent.endpointUrl}</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-500">Total Calls:</span>
-            <span className="font-semibold text-gray-800">{agent.totalCalls}</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-sm text-gray-500">Total Earnings:</span>
-            <span className="font-semibold text-green-600">{formattedEarnings} SOL</span>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-400">Used:</span>
+            <span className="text-sm text-gray-400">{agent.totalCalls} times</span>
           </div>
         </div>
       </div>
       
-      <div className="border-t border-gray-100 p-4">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-2 p-4">
+        <Link href="/api-keys">
           <button
-            onClick={handleEditClick}
             disabled={isLoading || !connected}
-            className={`flex-1 py-2 px-4 rounded-md font-medium text-sm focus:outline-none ${
-              isLoading
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
+            className="w-full py-2 px-4 rounded-md font-medium text-sm focus:outline-none bg-green-500 text-black hover:bg-green-400 disabled:bg-gray-500 disabled:text-gray-300"
           >
-            Edit Agent
+            Use Agent
           </button>
-          
-          <button
-            onClick={handleDeleteClick}
-            disabled={isLoading || !connected}
-            className={`py-2 px-4 rounded-md font-medium text-sm focus:outline-none ${
-              isLoading
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
-            }`}
-          >
-            Delete
-          </button>
+        </Link>
+        
+        <div className="text-center text-gray-500 text-xs mt-2">
+          {shortenAddress(agent.id, 8)}
         </div>
       </div>
     </div>

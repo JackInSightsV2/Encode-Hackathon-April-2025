@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { fetchAgentsByOwner, Agent } from '@/utils/mockAgents';
+import { useConnection } from '@solana/wallet-adapter-react';
+import { Agent } from '@/utils/mockAgents';
+import { fetchAgentsFromChain } from '@/utils/transactions';
 import MyAgentCard from './MyAgentCard';
 import AgentModal from './AgentModal';
 import toast from 'react-hot-toast';
@@ -11,6 +13,7 @@ import WalletConnectButton from './WalletConnectButton';
 
 export default function MyAgentsList() {
   const { connected, publicKey } = useWallet();
+  const { connection } = useConnection();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +30,28 @@ export default function MyAgentsList() {
 
       try {
         setLoading(true);
-        const data = await fetchAgentsByOwner(publicKey.toString());
-        setAgents(data);
+        
+        // Fetch all agents from the blockchain
+        const allAgents = await fetchAgentsFromChain(connection);
+        
+        if (!allAgents) {
+          setError('Failed to fetch agents from the blockchain. Please try again later.');
+          setAgents([]);
+          return;
+        }
+        
+        // Filter only the agents owned by the current wallet
+        const myAgents = allAgents.filter(agent => 
+          agent.owner.toLowerCase() === publicKey.toString().toLowerCase()
+        );
+        
+        setAgents(myAgents);
         setError(null);
+        
+        // Show a message if no agents were found but the blockchain query was successful
+        if (myAgents.length === 0) {
+          console.log('No agents found for this wallet:', publicKey.toString());
+        }
       } catch (err) {
         console.error('Error fetching my agents:', err);
         setError('Failed to load your agents. Please try again later.');
@@ -39,7 +61,7 @@ export default function MyAgentsList() {
     };
 
     loadMyAgents();
-  }, [connected, publicKey]);
+  }, [connected, publicKey, connection]);
 
   const handleEditAgent = (agent: Agent) => {
     // For demo purposes, we'll just show a toast message
