@@ -6,20 +6,13 @@ import sqlite3
 
 # Import models
 from app.models.models import (
-    Article, SummarizeRequest, SummarizeResponse,
-    TranslationRequest, TranslationResponse, TransactionHistory, StoryGenRequest
+    Article, TransactionHistory
 )
 
 # Import services
 from app.services import (
-    NewsSummarizer, Translator, SolanaService, DatabaseService, SessionManager, APIRouter
+    SolanaService, DatabaseService, SessionManager, APIRouter
 )
-
-# Import dummy data
-from app.data.dummy_data import DUMMY_ARTICLES
-
-# Import story generation
-from app.services.story_gen import StoryGen
 
 # Load environment variables
 load_dotenv()
@@ -42,49 +35,6 @@ app.add_middleware(
 # Initialize services
 api_router = APIRouter()
 session_manager = SessionManager()
-
-# Test endpoints
-@app.get("/test/articles", response_model=list[Article])
-async def get_test_articles():
-    return DUMMY_ARTICLES
-
-@app.get("/test/article/{article_id}", response_model=Article)
-async def get_test_article(article_id: int):
-    article = next((a for a in DUMMY_ARTICLES if a["id"] == article_id), None)
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    return article
-
-@app.post("/test/summarize", response_model=SummarizeResponse)
-async def test_summarize(article_id: int):
-    article = next((a for a in DUMMY_ARTICLES if a["id"] == article_id), None)
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    
-    try:
-        result = await NewsSummarizer().summarize(
-            article_url=article["url"],
-            article_text=article["content"]
-        )
-        return SummarizeResponse(
-            **result,
-            status="success",
-            tx_verified=True
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-@app.post("/test/story_gen")
-async def test_story_gen(request: dict):
-    try:
-        result = await StoryGen().generate_story(request.get("prompt"))
-        return {
-            **result,
-            "status": "success",
-            "tx_verified": True    
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 # Main endpoints
 @app.get("/health")
