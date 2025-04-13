@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
@@ -19,12 +19,15 @@ export const metadata: Metadata = {
   title: "AI Agent Marketplace | Solana",
   description: "A marketplace for AI agents on Solana",
   manifest: "/manifest.json",
-  themeColor: "#9945FF", // Solana purple
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "AI Agent Marketplace",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#9945FF", // Solana purple
 };
 
 export default function RootLayout({

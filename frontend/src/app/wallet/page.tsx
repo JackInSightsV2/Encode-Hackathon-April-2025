@@ -10,6 +10,7 @@ import {
   type WalletDetails as ApiWalletDetails
 } from '@/utils/api';
 import PageLayout from '@/components/PageLayout';
+import { LIVE_ESCROW_API_URL } from '@/utils/constants';
 
 export default function WalletPage() {
   const { publicKey, connected } = useWallet();
@@ -20,6 +21,45 @@ export default function WalletPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState<number>(1);
   const [isDepositing, setIsDepositing] = useState(false);
+  const [useMockData, setUseMockData] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'unknown' | 'online' | 'offline'>('unknown');
+
+  // Check if API is available
+  useEffect(() => {
+    const checkApiStatus = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(`${LIVE_ESCROW_API_URL}/test`, {
+          signal: controller.signal,
+          mode: 'cors',
+          cache: 'no-cache',
+        }).catch((err) => {
+          console.error('Fetch error during API check:', err);
+          return null;
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response && response.ok) {
+          console.log('Live API is available');
+          setApiStatus('online');
+          setUseMockData(false);
+        } else {
+          console.log('Live API is not available, using mock data');
+          setApiStatus('offline');
+          setUseMockData(true);
+        }
+      } catch (error) {
+        console.error('Error checking API status:', error);
+        setApiStatus('offline');
+        setUseMockData(true);
+      }
+    };
+    
+    checkApiStatus();
+  }, []);
 
   useEffect(() => {
     // Redirect to home if not connected
@@ -32,15 +72,15 @@ export default function WalletPage() {
     const fetchWalletData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Step 1: Authenticate with wallet address
         const authResponse = await authenticateWallet(publicKey.toString());
         setSessionId(authResponse.session_id);
         
         // Step 2: Get wallet balance and transaction history using the session ID
-        const walletDetails = await getWalletDetails(authResponse.session_id);
+        const walletDetails = await getWalletDetails(authResponse.session_id, useMockData);
         setWalletData(walletDetails);
-        setError(null);
       } catch (err) {
         console.error('Failed to fetch wallet data:', err);
         setError('Failed to load wallet data. Please try again later.');
@@ -50,7 +90,7 @@ export default function WalletPage() {
     };
 
     fetchWalletData();
-  }, [publicKey, connected, router]);
+  }, [publicKey, connected, router, useMockData]);
 
   // Handle deposit
   const handleDeposit = async () => {
@@ -58,31 +98,31 @@ export default function WalletPage() {
     
     try {
       setIsDepositing(true);
-      const updatedBalance = await depositFunds(sessionId, depositAmount);
+      setError(null);
       
-      // Update the local wallet data with the new balance
-      if (walletData) {
-        const now = new Date().toISOString();
-        setWalletData({
-          ...walletData,
-          balance: updatedBalance.balance,
-          transactions: [
-            {
-              id: `deposit-${now}`,
-              amount: depositAmount,
-              type: 'deposit',
-              timestamp: now
-            },
-            ...walletData.transactions
-          ]
-        });
-      }
+      const updatedBalance = await depositFunds(sessionId, depositAmount, useMockData);
+      
+      // Refresh wallet data to include the new transaction
+      const walletDetails = await getWalletDetails(sessionId, useMockData);
+      setWalletData(walletDetails);
     } catch (err) {
       console.error('Failed to deposit funds:', err);
       setError('Failed to deposit funds. Please try again later.');
     } finally {
       setIsDepositing(false);
     }
+  };
+
+  // Toggle data source
+  const toggleDataSource = () => {
+    // Only inform user if live API is not available when trying to use it
+    if (useMockData && apiStatus === 'offline') {
+      setError('Live API is not available. Using mock data instead.');
+      return;
+    }
+    
+    // Otherwise allow toggling between mock and live data
+    setUseMockData(!useMockData);
   };
 
   // Format date string to a more readable format
@@ -105,25 +145,39 @@ export default function WalletPage() {
       );
     }
 
-    if (error) {
-      return (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg">
-          <p className="font-medium">Error: {error}</p>
-        </div>
-      );
-    }
-
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Balance Card */}
         <div className="lg:col-span-1">
           <div className="bg-darkGray rounded-xl p-6 border border-purple/20 shadow-lg">
-            <h2 className="text-lg font-medium text-lightGray mb-2">Current Balance</h2>
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-lg font-medium text-lightGray">Current Balance</h2>
+              <div 
+                className={`flex items-center gap-2 text-sm ${apiStatus === 'offline' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} 
+                onClick={toggleDataSource}
+              >
+                <span className={useMockData ? "text-yellow" : "text-green"}>
+                  {useMockData ? "Using Mock Data" : "Using Live Data"}
+                </span>
+                <div className={`w-10 h-5 rounded-full transition-colors ${useMockData ? 'bg-yellow/20' : 'bg-green/20'} relative`}>
+                  <div 
+                    className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${useMockData ? 'left-0.5 bg-yellow' : 'left-5.5 bg-green'}`}
+                  ></div>
+                </div>
+              </div>
+            </div>
+            
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-2 rounded-lg text-sm mb-3">
+                {error}
+              </div>
+            )}
+            
             <div className="text-4xl font-bold gradient-text">
               ${walletData?.balance.toFixed(2)}
             </div>
             <p className="text-sm text-lightGray mt-2">
-              Session ID: {sessionId}
+              Wallet ID: {publicKey?.toString().substring(0, 12)}...
             </p>
             <div className="mt-6 space-y-3">
               <div className="flex gap-2">
@@ -145,8 +199,20 @@ export default function WalletPage() {
                 </button>
               </div>
               <p className="text-xs text-lightGray">
-                Note: This is using dummy data for demonstration
+                {useMockData 
+                  ? "Using mock data for demonstration" 
+                  : "Connected to escrow API on port 8001"}
               </p>
+              {apiStatus === 'online' && !useMockData && (
+                <p className="text-xs text-green font-semibold">
+                  ● Live API connection is active
+                </p>
+              )}
+              {apiStatus === 'offline' && (
+                <p className="text-xs text-yellow">
+                  ● Live API is not available
+                </p>
+              )}
             </div>
           </div>
         </div>

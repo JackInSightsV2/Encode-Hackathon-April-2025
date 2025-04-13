@@ -1,76 +1,139 @@
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
-from sqlalchemy import Column, String, Float, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from tinydb import TinyDB, Query
+from fastapi.middleware.cors import CORSMiddleware
 import os
+import uvicorn
+from datetime import datetime
+import uuid
 
 app = FastAPI()
 
-# SQLite DB setup
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./escrow.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(bind=engine)
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins instead of just localhost:3000
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-Base = declarative_base()
+# Test endpoint for connectivity checks
+@app.get("/test")
+def test_connection():
+    return {"status": "ok", "message": "API is working"}
 
-class UserEscrow(Base):
-    __tablename__ = "user_escrow"
-    user_id = Column(String, primary_key=True, index=True)
-    balance = Column(Float, default=0.0)
+# TinyDB setup
+db_path = os.getenv("DATABASE_PATH", "./escrow.json")
+db = TinyDB(db_path)
+escrow_table = db.table('user_escrow')
+transactions_table = db.table('transactions')
 
-Base.metadata.create_all(bind=engine)
-
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# Pydantic models (user_id no longer used from here directly)
+# Pydantic models
 class DepositRequest(BaseModel):
     amount: float
 
 class SpendRequest(BaseModel):
     cost: float
 
+class Transaction(BaseModel):
+    id: str
+    user_id: str
+    amount: float
+    type: str
+    timestamp: str
+
+class WalletDetails(BaseModel):
+    user_id: str
+    balance: float
+    transactions: list[Transaction] = []
+
+# Helper function to record transactions
+def record_transaction(user_id: str, amount: float, tx_type: str):
+    tx_id = str(uuid.uuid4())
+    timestamp = datetime.now().isoformat()
+    transactions_table.insert({
+        'id': tx_id,
+        'user_id': user_id,
+        'amount': amount,
+        'type': tx_type,
+        'timestamp': timestamp
+    })
+    return {'id': tx_id, 'user_id': user_id, 'amount': amount, 'type': tx_type, 'timestamp': timestamp}
+
 # Deposit endpoint (requires X-User-ID header)
 @app.post("/deposit")
 def deposit_funds(
     request: DepositRequest,
-    user_id: str = Header(..., alias="X-User-ID"),
-    db: Session = Depends(get_db)
+    user_id: str = Header(..., alias="X-User-ID")
 ):
-    # Trust that user_id is already verified by another backend
-    user = db.query(UserEscrow).filter_by(user_id=user_id).first()
-    if user:
-        user.balance += request.amount
+    User = Query()
+    user_record = escrow_table.get(User.user_id == user_id)
+    
+    if user_record:
+        new_balance = user_record['balance'] + request.amount
+        escrow_table.update({'balance': new_balance}, User.user_id == user_id)
     else:
-        user = UserEscrow(user_id=user_id, balance=request.amount)
-        db.add(user)
-    db.commit()
-    return {"user_id": user_id, "new_balance": user.balance}
+        escrow_table.insert({'user_id': user_id, 'balance': request.amount})
+        new_balance = request.amount
+    
+    # Record the transaction
+    transaction = record_transaction(user_id, request.amount, 'deposit')
+        
+    return {"user_id": user_id, "balance": new_balance, "transaction": transaction}
 
-# Check balance (same as before)
+# Get wallet details (balance and transactions)
+@app.get("/wallet/{user_id}")
+def get_wallet_details(user_id: str):
+    User = Query()
+    Tx = Query()
+    
+    # Get user balance
+    user_record = escrow_table.get(User.user_id == user_id)
+    balance = user_record['balance'] if user_record else 0
+    
+    # Get transactions for this user
+    transactions = transactions_table.search(Tx.user_id == user_id)
+    
+    # Sort transactions by timestamp in descending order (newest first)
+    transactions.sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    return {
+        "user_id": user_id,
+        "balance": balance,
+        "transactions": transactions
+    }
+
+# Check balance
 @app.get("/balance/{user_id}")
-def get_balance(user_id: str, db: Session = Depends(get_db)):
-    user = db.query(UserEscrow).filter_by(user_id=user_id).first()
-    if not user:
+def get_balance(user_id: str):
+    User = Query()
+    user_record = escrow_table.get(User.user_id == user_id)
+    
+    if not user_record:
         return {"user_id": user_id, "balance": 0}
-    return {"user_id": user_id, "balance": user.balance}
+    
+    return {"user_id": user_id, "balance": user_record['balance']}
 
 # Spend funds endpoint (requires X-User-ID header)
 @app.post("/spend")
 def spend_funds(
     request: SpendRequest,
-    user_id: str = Header(..., alias="X-User-ID"),
-    db: Session = Depends(get_db)
+    user_id: str = Header(..., alias="X-User-ID")
 ):
-    user = db.query(UserEscrow).filter_by(user_id=user_id).first()
-    if not user or user.balance < request.cost:
+    User = Query()
+    user_record = escrow_table.get(User.user_id == user_id)
+    
+    if not user_record or user_record['balance'] < request.cost:
         raise HTTPException(status_code=400, detail="Insufficient funds")
-    user.balance -= request.cost
-    db.commit()
-    return {"user_id": user_id, "remaining_balance": user.balance}
+    
+    new_balance = user_record['balance'] - request.cost
+    escrow_table.update({'balance': new_balance}, User.user_id == user_id)
+    
+    # Record the transaction
+    transaction = record_transaction(user_id, request.cost, 'spent')
+    
+    return {"user_id": user_id, "balance": new_balance, "transaction": transaction}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8001)
