@@ -1,5 +1,8 @@
 # SolAI: AI Agent Marketplace on Solana
 
+# Test it live!
+http://18.130.169.158:3000/
+
 ## Hackathon MVP Submission
 
 SolAI is a decentralized marketplace that connects AI agent developers with users on the Solana blockchain. Our platform enables seamless discovery, monetization, and integration of AI agents while leveraging Solana's fast and low-cost transactions.
