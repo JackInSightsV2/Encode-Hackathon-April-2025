@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { fetchAgents, Agent } from '@/utils/mockAgents';
 import { fetchAgentsFromChain } from '@/utils/transactions';
@@ -14,32 +15,34 @@ export default function AgentList() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [showEndpoint, setShowEndpoint] = useState(false);
+  const [refreshCount, setRefreshCount] = useState(0);
 
-  useEffect(() => {
-    const loadAgents = async () => {
-      setLoading(true);
-      try {
-        const blockchainAgents = await fetchAgentsFromChain(connection);
-        if (blockchainAgents && blockchainAgents.length > 0) {
-          setAgents(blockchainAgents);
-          setError(null);
-        } else {
-          const mockData = await fetchAgents();
-          setAgents(mockData);
-          setError('No blockchain agents found, showing mock data instead.');
-        }
-      } catch (err) {
-        console.error('Failed to fetch agents:', err);
+  const loadAgents = useCallback(async () => {
+    setLoading(true);
+    try {
+      const blockchainAgents = await fetchAgentsFromChain(connection);
+      if (blockchainAgents && blockchainAgents.length > 0) {
+        setAgents(blockchainAgents);
+        setError(null);
+      } else {
         const mockData = await fetchAgents();
         setAgents(mockData);
-        setError('Failed to fetch blockchain agents, showing mock data.');
-      } finally {
-        setLoading(false);
+        setError('No blockchain agents found, showing mock data instead.');
       }
-    };
-
-    loadAgents();
+    } catch (err) {
+      console.error('Failed to fetch agents:', err);
+      const mockData = await fetchAgents();
+      setAgents(mockData);
+      setError('Failed to fetch blockchain agents, showing mock data.');
+    } finally {
+      setLoading(false);
+    }
   }, [connection]);
+
+  // Initial load
+  useEffect(() => {
+    loadAgents();
+  }, [loadAgents, refreshCount]);
 
   const handleUseAgent = (agent: Agent) => {
     setSelectedAgent(agent);
@@ -47,6 +50,7 @@ export default function AgentList() {
   };
 
   const handleCloseModal = () => {
+    // Simply close the modal without any refresh or rerendering
     setSelectedAgent(null);
     setShowEndpoint(false);
   };

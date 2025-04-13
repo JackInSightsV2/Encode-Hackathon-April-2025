@@ -122,7 +122,6 @@ export default function AgentCard({ agent, onUse }: AgentCardProps) {
             {hasPaid && !isOwner && (
               <StatusIndicator status="success" text="Purchased" size="sm" className="mr-2" />
             )}
-            <span>Used: {agent.totalCalls} times</span>
           </div>
         </div>
       </div>

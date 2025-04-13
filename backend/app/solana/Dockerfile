@@ -11,7 +11,7 @@ COPY escrow_api.py .
 VOLUME /app/data
 
 # Set environment variable for the database location
-ENV DATABASE_URL="sqlite:///./data/escrow.db"
+ENV DATABASE_PATH="/app/data/escrow.json"
 
 # Expose the port the app runs on
 EXPOSE 8000

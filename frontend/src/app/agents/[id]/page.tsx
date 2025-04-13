@@ -205,11 +205,6 @@ export default function AgentDetailPage() {
                   <span className="text-sm text-gray-500">Owner:</span>
                   <span className="font-mono text-sm">{shortenAddress(agent.owner, 6)}</span>
                 </div>
-                
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-500">Total Calls:</span>
-                  <span>{agent.totalCalls}</span>
-                </div>
               </div>
             </div>
             

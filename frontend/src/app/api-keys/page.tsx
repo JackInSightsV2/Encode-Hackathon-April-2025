@@ -9,6 +9,7 @@ import { fetchRealApiKeys, createRealApiKey, deleteRealApiKey } from '@/utils/ap
 import toast from 'react-hot-toast';
 import { Switch } from '@headlessui/react';
 import { Dialog, Transition } from '@headlessui/react';
+import { AUTH_API_URL } from '@/utils/constants';
 
 export default function ApiKeysPage() {
   const router = useRouter();
@@ -32,14 +33,11 @@ export default function ApiKeysPage() {
       return;
     }
     
-    // Import API URL from apiKeyService
-    const API_URL = 'http://localhost:8000';
-    
     const checkApiStatus = async () => {
       try {
         // First try a simple health check to see if the server is responding at all
         try {
-          const response = await fetch(`${API_URL}/`, {
+          const response = await fetch(`${AUTH_API_URL}/`, {
             method: 'GET',
             mode: 'no-cors',  // This will allow the request to proceed even with CORS issues
             headers: { 
@@ -255,13 +253,10 @@ export default function ApiKeysPage() {
                   onClick={() => {
                     setApiStatus('unknown');
                     
-                    // Import API URL from apiKeyService
-                    const API_URL = 'http://localhost:8000';
-                    
                     const checkApiStatus = async () => {
                       try {
                         // First try a simple health check
-                        const response = await fetch(`${API_URL}/`, {
+                        const response = await fetch(`${AUTH_API_URL}/`, {
                           method: 'GET',
                           mode: 'no-cors',
                           headers: { 
@@ -531,9 +526,6 @@ export default function ApiKeysPage() {
                     setApiStatus('unknown');
                     setUseMockData(false);
                     
-                    // Import API URL from apiKeyService
-                    const API_URL = 'http://localhost:8000';
-                    
                     // Set a timeout to catch hanging requests
                     setTimeout(() => {
                       if (apiStatus === 'unknown') {
@@ -548,10 +540,10 @@ export default function ApiKeysPage() {
                       try {
                         // First try a simple health check
                         try {
-                          console.log('Checking API health at', `${API_URL}/`);
+                          console.log('Checking API health at', `${AUTH_API_URL}/`);
                           
                           // Use no-cors mode to bypass CORS restrictions for the check
-                          const response = await fetch(`${API_URL}/`, {
+                          const response = await fetch(`${AUTH_API_URL}/`, {
                             method: 'GET',
                             mode: 'no-cors',
                             headers: { 

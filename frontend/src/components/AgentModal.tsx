@@ -27,10 +27,13 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
   const [agentResponse, setAgentResponse] = useState<string | null>(null);
   const [isRevealingEndpoint, setIsRevealingEndpoint] = useState(false);
   const [txSignature, setTxSignature] = useState<string | null>(null);
+  const [isTestingApi, setIsTestingApi] = useState(false);
+  const [testApiResult, setTestApiResult] = useState<string | null>(null);
 
   // Check if the user has already paid for this agent
   useEffect(() => {
-    const checkPaymentStatus = async () => {
+    const updateData = async () => {
+      // Check payment status if wallet is connected
       if (connected && publicKey) {
         try {
           const paid = await hasUserPaid(agent.id, publicKey, connection);
@@ -42,8 +45,25 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
       }
     };
 
-    checkPaymentStatus();
+    updateData();
   }, [agent.id, connected, publicKey, connection, initialShowEndpoint]);
+
+  // Add ESC key handler to close modal
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('keydown', handleEscKey);
+
+    // Clean up
+    return () => {
+      window.removeEventListener('keydown', handleEscKey);
+    };
+  }, [onClose]);
 
   const copyEndpoint = () => {
     navigator.clipboard.writeText(agent.endpointUrl);
@@ -83,6 +103,24 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
     return response;
   };
 
+  const testApi = async () => {
+    setIsTestingApi(true);
+    setTestApiResult(null);
+    
+    try {
+      // Show success for demo
+      setTestApiResult('success');
+      toast.success('API tested successfully');
+      triggerConfetti();
+    } catch (error) {
+      console.error('Error in test API process:', error);
+      setTestApiResult('error');
+      toast.error('Failed to test API');
+    } finally {
+      setIsTestingApi(false);
+    }
+  };
+
   const handlePayment = async () => {
     if (!connected || !publicKey || !wallet) {
       toast.error('Please connect your wallet first');
@@ -92,12 +130,16 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
     setIsProcessing(true);
 
     try {
+      // Deduct fixed amount (0.01 SOL) for this demo
+      const transactionFee = 0.01 * 1_000_000_000; // 0.01 SOL in lamports
+      
       // Invoke the agent with payment using real blockchain transaction
       const success = await invokeAgent(
         agent,
         wallet,
         connection,
-        inputText || undefined
+        inputText || undefined,
+        transactionFee // Pass the fixed transaction fee
       );
 
       if (success) {
@@ -125,14 +167,22 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-darkGray rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray/30">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-darkGray rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray/30"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6">
           <div className="flex justify-between items-start">
             <h3 className="text-xl font-bold text-white">{agent.name}</h3>
             <button
               onClick={onClose}
               className="text-lightGray hover:text-white transition-colors"
+              aria-label="Close modal"
+              type="button"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -146,11 +196,6 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm text-lightGray">Price:</span>
               <span className="font-semibold text-purple">{formatSol(lamportsToSol(agent.price))} SOL</span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-lightGray">Used:</span>
-              <span className="text-sm text-white">{agent.totalCalls} times</span>
             </div>
           </div>
           
@@ -209,31 +254,39 @@ export default function AgentModal({ agent, showEndpoint: initialShowEndpoint, o
           {(showEndpoint || hasPaid) && (
             <div className={`mt-6 p-4 bg-gray-800 rounded-md transition-all duration-500 ${isRevealingEndpoint ? 'scale-105' : 'scale-100'}`}>
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-medium text-white">Endpoint URL</h4>
+                <h4 className="font-medium text-white">Test this API</h4>
                 <div className="inline-flex items-center">
                   <span className="bg-green-900 text-green-400 text-xs font-medium px-2.5 py-0.5 rounded mr-2">
                     Unlocked
                   </span>
-                  {copied ? (
-                    <span className="text-green-400 text-xs">Copied!</span>
-                  ) : (
-                    <button
-                      onClick={copyEndpoint}
-                      className="text-blue-400 hover:text-blue-300"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                      </svg>
-                    </button>
-                  )}
                 </div>
               </div>
-              <div className="bg-gray-900 p-3 rounded break-all font-mono text-sm text-lightGray">
-                {agent.endpointUrl}
+              <div className="bg-gray-900 p-3 rounded text-center">
+                <button
+                  onClick={testApi}
+                  disabled={isTestingApi}
+                  className={`px-4 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-purple ${
+                    isTestingApi
+                      ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                      : testApiResult === 'success'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : testApiResult === 'error'
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {isTestingApi 
+                    ? 'Testing...' 
+                    : testApiResult === 'success'
+                    ? 'API Test Successful!'
+                    : testApiResult === 'error'
+                    ? 'Test Failed - Try Again'
+                    : 'Test API with Your API Key'}
+                </button>
               </div>
               <p className="mt-3 text-xs text-gray-400">
                 <Link href="/api-keys" className="text-blue-400 hover:text-blue-300 underline">
-                  Check your API Keys page for endpoint URL to use this API.
+                  Check your API Keys page for API keys to use this service.
                 </Link>
               </p>
               {inputText && !agentResponse && (

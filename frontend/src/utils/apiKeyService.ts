@@ -1,7 +1,8 @@
 import { ApiKey } from './mockApiKeys';
+import { AUTH_API_URL } from './constants';
 
-// Hardcoded URL to fix the "Failed to fetch" error
-const API_URL = 'http://localhost:8000';
+// Use the centralized API URL from constants
+const API_URL = AUTH_API_URL;
 
 interface ApiKeyResponse {
   name: string;

@@ -174,7 +174,7 @@ export default function WalletPage() {
             )}
             
             <div className="text-4xl font-bold gradient-text">
-              ${walletData?.balance.toFixed(2)}
+              {walletData?.balance.toFixed(2)} SOL
             </div>
             <p className="text-sm text-lightGray mt-2">
               Wallet ID: {publicKey?.toString().substring(0, 12)}...
@@ -247,7 +247,7 @@ export default function WalletPage() {
                         </td>
                         <td className="py-3 px-2 text-right font-medium">
                           <span className={tx.type === 'deposit' ? 'text-green' : 'text-yellow'}>
-                            {tx.type === 'deposit' ? '+' : '-'}${tx.amount.toFixed(2)}
+                            {tx.type === 'deposit' ? '+' : '-'}{tx.amount.toFixed(2)} SOL
                           </span>
                         </td>
                       </tr>

@@ -6,4 +6,4 @@ It checks the Solana blockchain for the wallet balance and would deduct per API 
 
 Ideally the gateway would have more secure auth and would allow the endpoint to pass directly back to the client application. 
 
-We didn't have enough time to brainstorm how this could be hosted (decentralised) on the blockchain. 
+We didn't have enough time to brainstorm how this could be hosted (decentralised) on the blockchain if it could be at all.

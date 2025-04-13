@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Header
 from pydantic import BaseModel
 from uuid import uuid4
 from datetime import datetime
@@ -131,6 +131,30 @@ def use_api_key(req: UseAPIKeyRequest):
                     "wallet_address": user["wallet_address"]
                 }
     raise HTTPException(status_code=404, detail="Invalid API key.")
+
+@app.get("/verify")
+def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")):
+    # Look for a user with the given API key
+    all_users = users_table.all()
+    for user in all_users:
+        for key in user["api_keys"]:
+            if key["key"] == x_api_key:
+                # Update key usage
+                UserQ = Query()
+                key["use_count"] += 1
+                key["last_used"] = datetime.utcnow().isoformat()
+                users_table.update({"api_keys": user["api_keys"]}, UserQ.wallet_address == user["wallet_address"])
+                
+                # Return user data
+                return {
+                    "name": key["name"],
+                    "wallet_address": user["wallet_address"],
+                    "uuid": user["wallet_address"],  # Using wallet address as UUID
+                    "valid": True
+                }
+    
+    # If no matching API key is found
+    raise HTTPException(status_code=401, detail="Invalid API key")
 
 if __name__ == "__main__":
     import uvicorn

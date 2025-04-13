@@ -7,7 +7,6 @@ export interface Agent {
   endpointUrl: string;
   price: number; // in lamports
   owner: string;
-  totalCalls: number;
 }
 
 // Mock owner addresses
@@ -21,59 +20,37 @@ const owners = [
 // Generate mock agent data
 export const mockAgents: Agent[] = [
   {
-    id: '1',
-    name: 'CodeReviewer AI',
-    description: 'An AI agent that reviews your code and provides feedback on best practices, potential bugs, and performance improvements.',
+    id: 'Dd5nNzqryaECX3S8WWYXUaQy9CeXrp4fXpSvSwoWQTRH',
+    name: 'Code Reviewer',
+    description: 'Reviews Code for API Agents',
     endpointUrl: 'https://api.example.com/codereview',
-    price: 0.05 * LAMPORTS_PER_SOL, // 0.05 SOL in lamports
+    price: 0.01 * LAMPORTS_PER_SOL, // 0.01 SOL in lamports
     owner: owners[0],
-    totalCalls: 42,
   },
   {
-    id: '2',
-    name: 'Text Summarizer',
-    description: 'Summarizes long articles, papers, or documents into concise summaries while preserving the key information.',
-    endpointUrl: 'https://api.example.com/summarize',
-    price: 0.02 * LAMPORTS_PER_SOL, // 0.02 SOL in lamports
+    id: 'JDHe31aHfjLVemV72W9BKfJ5e722uaMMNGQisRiiSqVC',
+    name: 'Programs in Pain',
+    description: 'Creates Images of Programmers feeling frustratrated at code.',
+    endpointUrl: 'https://api.example.com/pain',
+    price: 0.01 * LAMPORTS_PER_SOL, // 0.01 SOL in lamports
     owner: owners[1],
-    totalCalls: 127,
   },
   {
-    id: '3',
-    name: 'Image Generator',
-    description: 'Creates unique images based on text descriptions. Perfect for designers, content creators, and artists.',
-    endpointUrl: 'https://api.example.com/generate-image',
-    price: 0.1 * LAMPORTS_PER_SOL, // 0.1 SOL in lamports
+    id: 'GLawTo6WinYMkuKDvbreJ1c8XR1YkusfA1GZ763cGBqH',
+    name: 'Jokes API',
+    description: 'Used to pull Jokes from the API Endpoint',
+    endpointUrl: 'https://api.example.com/jokes',
+    price: 0.01 * LAMPORTS_PER_SOL, // 0.01 SOL in lamports
     owner: owners[2],
-    totalCalls: 89,
   },
   {
-    id: '4',
-    name: 'Language Translator',
-    description: 'Translates text between over 50 languages with high accuracy and preservation of context.',
-    endpointUrl: 'https://api.example.com/translate',
-    price: 0.03 * LAMPORTS_PER_SOL, // 0.03 SOL in lamports
+    id: 'HFGLKrytbuYkaAUozUjyQGUnWCdtNgcPb2HvvcFYFyUB',
+    name: 'Agentic AI - Website Builder',
+    description: 'With a single prompt; creates a web developer team to make and deploy a website.',
+    endpointUrl: 'https://api.example.com/builder',
+    price: 0.01 * LAMPORTS_PER_SOL, // 0.01 SOL in lamports
     owner: owners[3],
-    totalCalls: 205,
-  },
-  {
-    id: '5',
-    name: 'Data Analyzer',
-    description: 'Analyzes datasets to identify patterns, trends, and insights. Great for businesses and researchers.',
-    endpointUrl: 'https://api.example.com/analyze-data',
-    price: 0.08 * LAMPORTS_PER_SOL, // 0.08 SOL in lamports
-    owner: owners[0],
-    totalCalls: 63,
-  },
-  {
-    id: '6',
-    name: 'Content Writer',
-    description: 'Generates high-quality, engaging content for blogs, articles, and marketing materials on any topic.',
-    endpointUrl: 'https://api.example.com/write-content',
-    price: 0.04 * LAMPORTS_PER_SOL, // 0.04 SOL in lamports
-    owner: owners[1],
-    totalCalls: 158,
-  },
+  }
 ];
 
 /**

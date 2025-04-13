@@ -1,4 +1,4 @@
-import { API_BASE_URL, ESCROW_API_ENDPOINT, LIVE_ESCROW_API_URL } from './constants';
+import { API_BASE_URL, ESCROW_API_ENDPOINT, ESCROW_API_URL } from './constants';
 
 /**
  * API service for escrow-related operations
@@ -75,7 +75,7 @@ export async function getWalletBalance(
     console.log(`Getting live balance for wallet: ${sessionId}`);
     
     try {
-      const response = await fetch(`${LIVE_ESCROW_API_URL}/balance/${sessionId}`, {
+      const response = await fetch(`${ESCROW_API_URL}/balance/${sessionId}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -152,7 +152,7 @@ export async function getWalletDetails(
     console.log(`Getting live wallet details for wallet: ${sessionId}`);
     
     try {
-      const url = `${LIVE_ESCROW_API_URL}/wallet/${sessionId}`;
+      const url = `${ESCROW_API_URL}/wallet/${sessionId}`;
       console.log('Fetching from URL:', url);
       
       const response = await fetch(url, {
@@ -211,7 +211,7 @@ export async function depositFunds(
     console.log(`Depositing live ${amount} for wallet: ${sessionId}`);
     
     try {
-      const url = `${LIVE_ESCROW_API_URL}/deposit`;
+      const url = `${ESCROW_API_URL}/deposit`;
       console.log('POSTing to URL:', url);
       
       const response = await fetch(url, {

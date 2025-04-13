@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import Link from 'next/link';
 
 type MyAgentCardProps = {
-  agent: Agent;
+  agent: Agent & { totalCalls?: number };
   onEdit?: (agent: Agent) => void;
   onDelete?: (agent: Agent) => void;
 };
@@ -18,7 +18,7 @@ export default function MyAgentCard({ agent, onEdit, onDelete }: MyAgentCardProp
   const [isLoading, setIsLoading] = useState(false);
   
   // Calculate earnings (for demo purposes)
-  const earnings = agent.totalCalls * agent.price;
+  const earnings = (agent.totalCalls || 0) * agent.price;
   const formattedEarnings = formatSol(lamportsToSol(earnings));
   
   // Format price as SOL
@@ -84,11 +84,6 @@ export default function MyAgentCard({ agent, onEdit, onDelete }: MyAgentCardProp
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-400">Price:</span>
             <span className="font-semibold text-green-400">{formattedPrice} SOL</span>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-400">Used:</span>
-            <span className="text-sm text-gray-400">{agent.totalCalls} times</span>
           </div>
         </div>
       </div>
