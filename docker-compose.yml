@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  auth-service:
+    build:
+      context: ./backend/app/auth
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app/auth:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - app-network
+
+  escrow-service:
+    build:
+      context: ./backend/app/solana
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend/app/solana:/app
+      - escrow_data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - app-network
+
+  api-gateway:
+    build:
+      context: ./backend/app/api
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./backend/app/api:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AUTH_SERVICE_URL=http://auth-service:8000/verify
+      - ESCROW_SERVICE_URL=http://escrow-service:8000
+    depends_on:
+      - auth-service
+      - escrow-service
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_AUTH_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_ESCROW_API_URL=http://localhost:8001
+      - NEXT_PUBLIC_GATEWAY_API_URL=http://localhost:8002
+      - NEXT_LINT_IGNORE_LINT=1
+      - NEXT_TELEMETRY_DISABLED=1
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    depends_on:
+      - auth-service
+      - escrow-service
+      - api-gateway
+    networks:
+      - app-network
+
+volumes:
+  escrow_data:
+
+networks:
+  app-network:
+    driver: bridge 

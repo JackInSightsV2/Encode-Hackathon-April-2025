@@ -39,26 +39,3 @@ const programId = new PublicKey("JA9FE7qcuSHQTgeGBzQHWP8ZaeLGBHag8gU6D4ZaCnRa");
 const provider = anchor.AnchorProvider.env();
 const program = new anchor.Program(idl, programId, provider);
 ```
-
-3. **Run Frontend Test:**
-
-- Connect via Phantom Wallet (already set to **Devnet** mode).
-- Register a new AI Agent explicitly.
-- Invoke the AI Agent explicitly.
-- Confirm the payment flows on Solana explorer.
-
----
-
-### 🎯 **This completes your MVP clearly**:
-
-- You've **fully deployed** your Solana Anchor-based Rust smart contract explicitly.
-- You've verified it fully via explicit testing.
-- Your explicit IDL approach ensures reliable frontend and backend integration.
-
----
-
-### 🌟 **Hackathon Ready:**
-
-Your AI-Agent Marketplace is now deployed, tested, and explicitly verified end-to-end—you're completely ready for judging and demoing!
-
-Congratulations again—**great persistence and success!** 🚀🥳

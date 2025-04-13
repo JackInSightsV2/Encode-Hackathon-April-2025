@@ -209,7 +209,8 @@ export async function invokeAgent(
   agent: Agent, 
   wallet: any,
   connection: Connection,
-  input?: string
+  input?: string,
+  fixedFee?: number
 ): Promise<boolean> {
   if (!wallet.adapter?.publicKey) {
     toast.error('Wallet not connected');
@@ -249,6 +250,16 @@ export async function invokeAgent(
     
     // Create a new transaction and add our instruction
     const transaction = new Transaction().add(instruction);
+    
+    // Add a transfer instruction if a fixed fee is specified (for demo)
+    if (fixedFee) {
+      const transferInstruction = SystemProgram.transfer({
+        fromPubkey: wallet.adapter.publicKey,
+        toPubkey: new PublicKey(agent.owner), 
+        lamports: fixedFee
+      });
+      transaction.add(transferInstruction);
+    }
     
     // Set recent blockhash and fee payer
     transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;

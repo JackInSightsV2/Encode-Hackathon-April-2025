@@ -6,9 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "clean": "rimraf .next out",
+    "prebuild": "npm run clean"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.1",
     "@project-serum/anchor": "^0.26.0",
     "@solana/errors": "^2.1.0",
     "@solana/kit": "^2.1.0",
