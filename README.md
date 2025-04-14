@@ -1,8 +1,5 @@
 # SolAI: AI Agent Marketplace on Solana
 
-# Test it live!
-http://18.130.169.158:3000/
-
 ## Hackathon MVP Submission
 
 SolAI is a decentralized marketplace that connects AI agent developers with users on the Solana blockchain. Our platform enables seamless discovery, monetization, and integration of AI agents while leveraging Solana's fast and low-cost transactions.
@@ -35,7 +32,7 @@ docker compose up
 Once running:
 - Access the marketplace at: http://localhost:3000
 - Connect your Solana wallet to explore the full functionality
-- We recommend using Phantom Wallet and switch it to the devnet; you may need to give yourselves some SOL using the Solana CLI
+- We recommend using Phantom Wallet and switching it to the devnet; you may need to give yourselves some SOL using the Solana CLI
 
 ## 💡 Use Cases
 
